@@ -76,7 +76,7 @@ namespace Microsoft.NetCore.Analyzers.Runtime
             {
                 #region "Get All the WellKnown Types and Members"
                 var iformatProviderType = csaContext.Compilation.GetTypeByMetadataName("System.IFormatProvider");
-                var cultureInfoType = csaContext.Compilation.GetTypeByMetadataName("System.Globalization.CultureInfo");
+                var cultureInfoType = WellKnownTypes.CultureInfo(csaContext.Compilation);
                 if (iformatProviderType == null || cultureInfoType == null)
                 {
                     return;

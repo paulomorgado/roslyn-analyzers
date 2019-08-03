@@ -20,14 +20,11 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
     public static class DoNotCreateStringsForComparisonTests
     {
 #pragma warning disable CA2211 // Non-constant fields should not be visible
-        public static TheoryData<string, string> ToX_NonCaseChanging_TheoryData = new TheoryData<string, string>
+        public static TheoryData<string> StringComparison_TheoryData = new TheoryData<string>
         {
-            { "Lower", "OrdinalIgnoreCase" },
-            { "Lower", "InvariantCultureIgnoreCase" },
-            { "Lower", "CurrentCultureIgnoreCase" },
-            { "Upper", "OrdinalIgnoreCase" },
-            { "Upper", "InvariantCultureIgnoreCase" },
-            { "Upper", "CurrentCultureIgnoreCase" },
+            { "OrdinalIgnoreCase" },
+            { "InvariantCultureIgnoreCase" },
+            { "CurrentCultureIgnoreCase" },
         };
 
         public static TheoryData<string> ToXInvariant_NonCaseChanging_TheoryData = new TheoryData<string>
@@ -36,18 +33,16 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             { "Upper" },
         };
 
-        public static TheoryData<string, string, string> ToXWithCultureInfo_NonCaseChanging_TheoryData = new TheoryData<string, string, string>
+        public static TheoryData<string, string> ToXWithCultureInfo_NonCaseChanging_TheoryData = new TheoryData<string, string>
         {
-            { "Lower", nameof(CultureInfo.InvariantCulture), "InvariantCultureIgnoreCase" },
-            { "Lower", nameof(CultureInfo.CurrentCulture), "CurrentCultureIgnoreCase" },
-            { "Upper", nameof(CultureInfo.InvariantCulture), "InvariantCultureIgnoreCase" },
-            { "Upper", nameof(CultureInfo.CurrentCulture), "CurrentCultureIgnoreCase" },
+            { nameof(CultureInfo.InvariantCulture), "InvariantCultureIgnoreCase" },
+            { nameof(CultureInfo.CurrentCulture), "CurrentCultureIgnoreCase" },
         };
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
         [Theory]
-        [MemberData(nameof(ToX_NonCaseChanging_TheoryData))]
-        public static Task ToXEqualsComparisonNonCaseChanging(string @case, string expectedStringComparison)
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXComparison(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -59,7 +54,14 @@ class C
 {{
     void M()
     {{
-        var s = [|string.Empty.To{@case}() == ""x""|];
+        _ = [|""y"".ToUpper() == ""x""|];
+        _ = [|""x"" == ""y"".ToUpper()|];
+        _ = [|""y"".ToUpper() != ""x""|];
+        _ = [|""x"" != ""y"".ToUpper()|];
+        _ = [|""y"".ToLower() == ""x""|];
+        _ = [|""x"" == ""y"".ToLower()|];
+        _ = [|""y"".ToLower() != ""x""|];
+        _ = [|""x"" != ""y"".ToLower()|];
     }}
 }}
 ",
@@ -74,7 +76,14 @@ class C
 {{
     void M()
     {{
-        var s = string.Equals(string.Empty, ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -84,8 +93,8 @@ class C
             }.RunAsync();
 
         [Theory]
-        [MemberData(nameof(ToX_NonCaseChanging_TheoryData))]
-        public static Task ToXNotEqualsComparisonNonCaseChanging(string @case, string expectedStringComparison)
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXInstanceEquals1(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -97,7 +106,10 @@ class C
 {{
     void M()
     {{
-        var s = [|""x"" == string.Empty.To{@case}()|];
+        _ = [|""y"".ToUpper().Equals(""x"")|];
+        _ = [|""x"".Equals(""y"".ToUpper())|];
+        _ = [|""y"".ToLower().Equals(""x"")|];
+        _ = [|""x"".Equals(""y"".ToLower())|];
     }}
 }}
 ",
@@ -112,7 +124,10 @@ class C
 {{
     void M()
     {{
-        var s = !string.Equals(string.Empty, ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -122,8 +137,8 @@ class C
             }.RunAsync();
 
         [Theory]
-        [MemberData(nameof(ToX_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingEqualsComparisonToX(string @case, string expectedStringComparison)
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXStringEquals2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -135,7 +150,10 @@ class C
 {{
     void M()
     {{
-        var s = [|string.Empty.To{@case}() == ""x""|];
+        _ = [|string.Equals(""y"".ToUpper(), ""x"")|];
+        _ = [|string.Equals(""x"", ""y"".ToUpper())|];
+        _ = [|string.Equals(""y"".ToLower(), ""x"")|];
+        _ = [|string.Equals(""x"", ""y"".ToLower())|];
     }}
 }}
 ",
@@ -150,7 +168,10 @@ class C
 {{
     void M()
     {{
-        var s = string.Equals(""x"", string.Empty, StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -160,8 +181,8 @@ class C
             }.RunAsync();
 
         [Theory]
-        [MemberData(nameof(ToX_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingNotEqualsComparisonToX(string @case, string expectedStringComparison)
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXSystemStringEquals2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -173,7 +194,10 @@ class C
 {{
     void M()
     {{
-        var s = [|""x"" != string.Empty.To{@case}()|];
+        _ = [|global::System.String.Equals(""y"".ToUpper(), ""x"")|];
+        _ = [|System.String.Equals(""x"", ""y"".ToUpper())|];
+        _ = [|String.Equals(""y"".ToLower(), ""x"")|];
+        _ = [|String.Equals(""x"", ""y"".ToLower())|];
     }}
 }}
 ",
@@ -188,45 +212,10 @@ class C
 {{
     void M()
     {{
-        var s = !string.Equals(""x"", string.Empty, StringComparison.{expectedStringComparison});
-    }}
-}}
-",
-                    },
-                },
-                CodeFixEquivalenceKey = expectedStringComparison,
-            }.RunAsync();
-
-        [Theory]
-        [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
-        public static Task ToXWithCultureInfoEqualsComparisonNonCaseChanging(string @case, string cultureInfo, string expectedStringComparison)
-            => new VerifyCS.Test
-            {
-                TestState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|string.Empty.To{@case}(System.Globalization.CultureInfo.{cultureInfo}) == ""x""|];
-    }}
-}}
-",
-                    },
-                },
-                FixedState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = string.Equals(string.Empty, ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -237,7 +226,7 @@ class C
 
         [Theory]
         [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
-        public static Task ToXWithCultureInfoNotEqualsComparisonNonCaseChanging(string @case, string cultureInfo, string expectedStringComparison)
+        public static Task ToXWithCultureInfoPropertyComparisonNonCaseChanging(string cultureInfo, string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -249,7 +238,14 @@ class C
 {{
     void M()
     {{
-        var s = [|string.Empty.To{@case}(System.Globalization.CultureInfo.{cultureInfo}) != ""x""|];
+        _ = [|""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo}) == ""x""|];
+        _ = [|""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo}) != ""x""|];
+        _ = [|""x"" == ""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo})|];
+        _ = [|""x"" != ""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo})|];
+        _ = [|""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo}) == ""x""|];
+        _ = [|""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo}) != ""x""|];
+        _ = [|""x"" == ""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo})|];
+        _ = [|""x"" != ""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo})|];
     }}
 }}
 ",
@@ -264,7 +260,14 @@ class C
 {{
     void M()
     {{
-        var s = !string.Equals(string.Empty, ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -273,9 +276,8 @@ class C
                 CodeFixEquivalenceKey = expectedStringComparison,
             }.RunAsync();
 
-        [Theory]
-        [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingEqualsComparisonToXWithCultureInfo(string @case, string cultureInfo, string expectedStringComparison)
+        [Fact]
+        public static Task ToXWithCustomCultureInfoomparisonNonCaseChanging()
             => new VerifyCS.Test
             {
                 TestState =
@@ -287,77 +289,33 @@ class C
 {{
     void M()
     {{
-        var s = [|""x"" == string.Empty.To{@case}(System.Globalization.CultureInfo.{cultureInfo})|];
+        _ = ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x"")) == ""x"";
+        _ = ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x"")) != ""x"";
+        _ = ""x"" == ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x""));
+        _ = ""x"" != ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x""));
+        _ = ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x"")) == ""x"";
+        _ = ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x"")) != ""x"";
+        _ = ""x"" == ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x""));
+        _ = ""x"" != ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x""));
     }}
 }}
 ",
                     },
                 },
-                FixedState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = string.Equals(""x"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
-    }}
-}}
-",
-                    },
-                },
-                CodeFixEquivalenceKey = expectedStringComparison,
-            }.RunAsync();
-
-        [Theory]
-        [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingNotEqualsComparisonToXWithCultureInfo(string @case, string cultureInfo, string expectedStringComparison)
-            => new VerifyCS.Test
-            {
-                TestState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|""x"" != string.Empty.To{@case}(System.Globalization.CultureInfo.{cultureInfo})|];
-    }}
-}}
-",
-                    },
-                },
-                FixedState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = !string.Equals(""x"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
-    }}
-}}
-",
-                    },
-                },
-                CodeFixEquivalenceKey = expectedStringComparison,
             }.RunAsync();
 
         [Theory]
         [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task ToXInvariantEqualsComparisonNonCaseChanging(string @case)
+        public static Task ToXInvariantComparisonNonCaseChanging(string @case)
             => VerifyCS.VerifyCodeFixAsync($@"using System;
 class C
 {{
     void M()
     {{
-        var s = [|string.Empty.To{@case}Invariant() == ""x""|];
+        _ = [|""y"".To{@case}Invariant() == ""x""|];
+        _ = [|""y"".To{@case}Invariant() != ""x""|];
+        _ = [|""x"" == ""y"".To{@case}Invariant()|];
+        _ = [|""x"" != ""y"".To{@case}Invariant()|];
     }}
 }}
 ",
@@ -366,73 +324,10 @@ class C
 {
     void M()
     {
-        var s = string.Equals(string.Empty, ""x"", StringComparison.InvariantCultureIgnoreCase);
-    }
-}
-");
-
-        [Theory]
-        [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingEqualsComparisonToXInvariant(string @case)
-            => VerifyCS.VerifyCodeFixAsync($@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|""x"" == string.Empty.To{@case}Invariant()|];
-    }}
-}}
-",
-                @"using System;
-class C
-{
-    void M()
-    {
-        var s = string.Equals(""x"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
-    }
-}
-");
-
-        [Theory]
-        [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task ToXInvariantNotEqualsComparisonNonCaseChanging(string @case)
-            => VerifyCS.VerifyCodeFixAsync($@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|string.Empty.To{@case}Invariant() != ""x""|];
-    }}
-}}
-",
-                @"using System;
-class C
-{
-    void M()
-    {
-        var s = !string.Equals(string.Empty, ""x"", StringComparison.InvariantCultureIgnoreCase);
-    }
-}
-");
-
-        [Theory]
-        [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task NonCaseChangingNotEqualsComparisonToXInvariant(string @case)
-            => VerifyCS.VerifyCodeFixAsync($@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|""x"" != string.Empty.To{@case}Invariant()|];
-    }}
-}}
-",
-                @"using System;
-class C
-{
-    void M()
-    {
-        var s = !string.Equals(""x"", string.Empty, StringComparison.InvariantCultureIgnoreCase);
+        _ = string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
+        _ = !string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
+        _ = string.Equals(""x"", ""y"", StringComparison.InvariantCultureIgnoreCase);
+        _ = !string.Equals(""x"", ""y"", StringComparison.InvariantCultureIgnoreCase);
     }
 }
 ");
@@ -456,7 +351,7 @@ class C
 {{
     void M()
     {{
-        var s = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+        _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
     }}
 }}
 ",
@@ -471,7 +366,7 @@ class C
 {{
     void M()
     {{
-        var s = string.Equals({left}, {right}, StringComparison.{expectedStringComparison});
+        _ = string.Equals({left}, {right}, StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -481,14 +376,12 @@ class C
             }.RunAsync();
 
         [Theory]
-        [InlineData("\"x\"", "ToUpper()", "\"y\"", "ToLowerInvariant()", "OrdinalIgnoreCase")]
-        [InlineData("\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower()", "CurrentCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)", "OrdinalIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)", "InvariantCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)", "CurrentCultureIgnoreCase")]
-        public static async Task MixedEqualsComparison_NoDiagnostic_Tests(string left, string leftInvocation, string right, string rightInvocation, string expectedStringComparison)
-        {
-            await new VerifyCS.Test
+        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLowerInvariant()")]
+        [InlineData("\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)")]
+        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)")]
+        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.InvariantCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)")]
+        public static Task MixedEqualsComparison_Diagnostic_NoFix(string left, string leftInvocation, string right, string rightInvocation)
+            => new VerifyCS.Test
             {
                 TestState =
                 {
@@ -499,26 +392,7 @@ class C
 {{
     void M()
     {{
-        var s = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
-    }}
-}}
-",
-                    },
-                },
-            }.RunAsync();
-
-            await Assert.ThrowsAsync<Xunit.Sdk.TrueException>(() => new VerifyCS.Test
-            {
-                TestState =
-                {
-                    Sources =
-                    {
-                        $@"using System;
-class C
-{{
-    void M()
-    {{
-        var s = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+        _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
     }}
 }}
 ",
@@ -533,14 +407,12 @@ class C
 {{
     void M()
     {{
-        var s = string.Equals({left}, {right}, StringComparison.{expectedStringComparison});
+        _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
     }}
 }}
 ",
                     },
                 },
-                CodeFixEquivalenceKey = expectedStringComparison,
-            }.RunAsync());
-        }
+            }.RunAsync();
     }
 }

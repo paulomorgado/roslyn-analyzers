@@ -3,6 +3,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,13 +21,25 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             switch (node)
             {
                 case BinaryExpressionSyntax binaryExpression:
-                    GetCaseChangingInvocation(binaryExpression.Left, out leftNode, out var leftStringComparisons);
-                    GetCaseChangingInvocation(binaryExpression.Right, out rightnode, out var rightStringComparisons);
+                    {
+                        GetCaseChangingInvocation(binaryExpression.Left, out leftNode, out var leftStringComparisons);
+                        GetCaseChangingInvocation(binaryExpression.Right, out rightnode, out var rightStringComparisons);
 
-                    stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
-                    negate = binaryExpression.IsKind(SyntaxKind.NotEqualsExpression);
+                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
+                        negate = binaryExpression.IsKind(SyntaxKind.NotEqualsExpression);
 
-                    return true;
+                        return true;
+                    }
+                case InvocationExpressionSyntax invocationExpression when TryGetEqualsArguments(invocationExpression, out var argument1, out var argument2):
+                    {
+                        GetCaseChangingInvocation(argument1, out leftNode, out var leftStringComparisons);
+                        GetCaseChangingInvocation(argument2, out rightnode, out var rightStringComparisons);
+
+                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
+                        negate = false;
+
+                        return true;
+                    }
             }
 
             leftNode = default;
@@ -89,6 +102,32 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             return ImmutableArray<string>.Empty;
+        }
+
+        private static bool TryGetEqualsArguments(InvocationExpressionSyntax invocation, out SyntaxNode argument1, out SyntaxNode argument2)
+        {
+            if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
+            {
+                if (memberAccess.Expression is PredefinedTypeSyntax ||
+                    memberAccess.Expression is MemberAccessExpressionSyntax type && type.Expression is NameSyntax ||
+                    memberAccess.Expression is NameSyntax)
+                {
+                    argument1 = invocation.ArgumentList.Arguments[0].Expression;
+                    argument2 = invocation.ArgumentList.Arguments[1].Expression;
+
+                    return true;
+                }
+
+                argument1 = memberAccess.Expression;
+                argument2 = invocation.ArgumentList.Arguments[0].Expression;
+
+                return true;
+            }
+
+            argument1 = default;
+            argument2 = default;
+
+            return false;
         }
     }
 }

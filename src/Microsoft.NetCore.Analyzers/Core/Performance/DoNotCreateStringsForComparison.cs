@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -46,6 +47,10 @@ namespace Microsoft.NetCore.Analyzers.Performance
             ToLowerInvariantCaseChangingMethodName,
             ToUpperInvariantCaseChangingMethodName);
 
+        internal static readonly ImmutableArray<string> CultureInfoProperties = ImmutableArray.Create(
+            nameof(System.Globalization.CultureInfo.CurrentCulture),
+            nameof(System.Globalization.CultureInfo.InvariantCulture));
+
         /// <summary>
         /// Returns a set of descriptors for the diagnostics that this analyzer is capable of producing.
         /// </summary>
@@ -64,33 +69,67 @@ namespace Microsoft.NetCore.Analyzers.Performance
             analysisContext.RegisterCompilationStartAction(compilationStartAnalysisContext =>
             {
                 var stringType = WellKnownTypes.String(compilationStartAnalysisContext.Compilation);
+                var cultureInfoType = WellKnownTypes.CultureInfo(compilationStartAnalysisContext.Compilation);
 
                 compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
                 {
                     var binaryOperation = (IBinaryOperation)operationAnalysisContext.Operation;
 
                     if (IsEqualityOperation(binaryOperation) &&
-                        !hasCaseChangingMethodInvocation(binaryOperation.LeftOperand) &&
-                        !hasCaseChangingMethodInvocation(binaryOperation.RightOperand))
+                        (hasCaseChangingMethodInvocation(binaryOperation.LeftOperand) ||
+                            hasCaseChangingMethodInvocation(binaryOperation.RightOperand)))
                     {
-                        return;
+                        operationAnalysisContext.ReportDiagnostic(
+                            binaryOperation.Syntax.CreateDiagnostic(
+                                Rule));
+                    }
+                }, OperationKind.BinaryOperator);
+
+                compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
+                {
+                    var invocationOperation = (IInvocationOperation)operationAnalysisContext.Operation;
+
+                    if (isEqualsMethodInvocation(invocationOperation) &&
+                        (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation) ||
+                            isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)))
+                    {
+                        operationAnalysisContext.ReportDiagnostic(
+                            invocationOperation.Syntax.CreateDiagnostic(
+                                Rule));
                     }
 
-                    operationAnalysisContext.ReportDiagnostic(
-                        binaryOperation.Syntax.CreateDiagnostic(
-                            Rule));
-
-                }, OperationKind.BinaryOperator);
+                }, OperationKind.Invocation);
 
                 bool hasCaseChangingMethodInvocation(IOperation operation)
                     => operation.Type.Equals(stringType) &&
                         operation is IInvocationOperation invocationExpression &&
-                        CaseChangingMethodNames.Contains(invocationExpression.TargetMethod.Name);
+                        CaseChangingMethodNames.Contains(invocationExpression.TargetMethod.Name, StringComparer.Ordinal) &&
+                        (invocationExpression.Arguments.Length == 0 ||
+                            isCultureInfoProperty(invocationExpression.Arguments[0]));
+
+                bool isCultureInfoProperty(IArgumentOperation argumentOperation)
+                    => argumentOperation.Value is IPropertyReferenceOperation propertyOperation &&
+                        CultureInfoProperties.Contains(propertyOperation.Property.Name, StringComparer.Ordinal) &&
+                        propertyOperation.Property.ContainingSymbol.Equals(cultureInfoType);
+
+                bool isInstanceMethodWithCaseChangingMethodInvocation(IInvocationOperation invocationOperation)
+                    => invocationOperation.Instance is IOperation instance &&
+                        (hasCaseChangingMethodInvocation(instance) ||
+                            hasCaseChangingMethodInvocation(invocationOperation.Arguments[0].Value));
+
+                bool isStaticMethodWithCaseChangingMethodInvocation(IInvocationOperation invocationOperation)
+                    => invocationOperation.Instance is null &&
+                        (hasCaseChangingMethodInvocation(invocationOperation.Arguments[0].Value) ||
+                            hasCaseChangingMethodInvocation(invocationOperation.Arguments[1].Value));
+
+                bool isEqualsMethodInvocation(IInvocationOperation invocationOperation)
+                    => invocationOperation.TargetMethod.Name.Equals(nameof(string.Equals), StringComparison.Ordinal) &&
+                        invocationOperation.TargetMethod.ContainingType.Equals(stringType);
             });
         }
 
         private static bool IsEqualityOperation(IBinaryOperation binaryOperation)
-            => binaryOperation.OperatorKind != BinaryOperatorKind.Equals &&
+            => binaryOperation.OperatorKind != BinaryOperatorKind.Equals ||
                 binaryOperation.OperatorKind != BinaryOperatorKind.NotEquals;
     }
 }

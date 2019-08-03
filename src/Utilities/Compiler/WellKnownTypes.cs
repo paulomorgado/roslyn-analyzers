@@ -604,6 +604,11 @@ namespace Analyzer.Utilities
             return compilation.GetTypeByMetadataName(WellKnownTypeNames.SystemXmlXmlWriter);
         }
 
+        public static INamedTypeSymbol CultureInfo(Compilation compilation)
+        {
+            return compilation.GetTypeByMetadataName(WellKnownTypeNames.SystemGlobalizationCultureInfo);
+        }
+
         #region Test Framework Types
         public static INamedTypeSymbol TestCleanupAttribute(Compilation compilation)
         {

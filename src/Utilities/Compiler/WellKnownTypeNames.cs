@@ -30,6 +30,7 @@ namespace Analyzer.Utilities
         public const string SystemDateTime = "System.DateTime";
         public const string SystemDecimal = "System.Decimal";
         public const string SystemDouble = "System.Double";
+        public const string SystemGlobalizationCultureInfo = "System.Globalization.CultureInfo";
         public const string SystemGlobalizationTimeSpanParse = "System.Globalization.TimeSpanParse";
         public const string SystemGuid = "System.Guid";
         public const string SystemInt16 = "System.Int16";
