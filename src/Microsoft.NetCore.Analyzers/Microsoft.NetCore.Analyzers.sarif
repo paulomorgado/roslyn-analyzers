@@ -1741,6 +1741,25 @@
               "Telemetry"
             ]
           }
+        },
+        "CA5396": {
+          "id": "CA5396",
+          "shortDescription": "Set HttpOnly to true for HttpCookie",
+          "fullDescription": "As a defense in depth measure, ensure security sensitive HTTP cookies are marked as HttpOnly. This indicates web browsers should disallow scripts from accessing the cookies. Injected malicious scripts are a common way of stealing cookies.",
+          "defaultLevel": "warning",
+          "properties": {
+            "category": "Security",
+            "isEnabledByDefault": false,
+            "typeName": "SetHttpOnlyForHttpCookie",
+            "languages": [
+              "C#",
+              "Visual Basic"
+            ],
+            "tags": [
+              "Dataflow",
+              "Telemetry"
+            ]
+          }
         }
       }
     },
