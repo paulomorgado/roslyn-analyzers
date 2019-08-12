@@ -38,6 +38,13 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             { nameof(CultureInfo.InvariantCulture), "InvariantCultureIgnoreCase" },
             { nameof(CultureInfo.CurrentCulture), "CurrentCultureIgnoreCase" },
         };
+
+        public static TheoryData< string> Switch_TheoryData = new TheoryData<string>
+        {
+            { "ToLowerInvariant()" },
+            { "ToUpper(System.Globalization.CultureInfo.CurrentCulture)" },
+            { "ToUpper(System.Globalization.CultureInfo.InvariantCulture)" },
+        };
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
         [Theory]
@@ -408,6 +415,68 @@ class C
     void M()
     {{
         _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+    }}
+}}
+",
+                    },
+                },
+            }.RunAsync();
+
+        [Fact]
+        public static Task MixedBinaryTests()
+            => new VerifyCS.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        @"using System;
+class C
+{
+    void M()
+    {
+        _ = [|""y"".ToUpperInvariant() == ""x"".ToLower()|];
+        _ = [|""y"".ToUpper() == ""x"".ToLowerInvariant()|];
+    }
+}
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        @"using System;
+class C
+{
+    void M()
+    {
+        _ = string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
+        _ = string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
+    }
+}
+",
+                    },
+                },
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(Switch_TheoryData))]
+        public static Task SwitchTests(string invocation)
+            => new VerifyCS.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M(string key)
+    {{
+        switch ([|key.{invocation}|])
+        {{
+        }}
     }}
 }}
 ",

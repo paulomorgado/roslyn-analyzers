@@ -11,6 +11,10 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
     Public NotInheritable Class BasicDoNotCreateStringsForComparisonFixer
         Inherits DoNotCreateStringsForComparisonFixer
 
+        Protected Overrides Function TryGetReplacementSyntaxForBinaryOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightnode As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
+            Throw New NotImplementedException()
+        End Function
+
         Protected Overrides Function TryGetReplacementSyntax(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightnode As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String), ByRef negate As Boolean) As Boolean
             Return False
         End Function

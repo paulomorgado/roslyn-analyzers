@@ -1,18 +1,12 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Analyzer.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.Formatting;
 
@@ -61,18 +55,53 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
             var node = root.FindNode(context.Span);
+            var properties = context.Diagnostics[0].Properties;
 
-            if (TryGetReplacementSyntax(node, out var leftNode, out var rightnode, out var stringComparisons, out var negate))
+            if (properties.TryGetValue(DoNotCreateStringsForComparisonAnalyzer.OperationKey, out var operationKey))
             {
-                foreach (var stringComparison in stringComparisons)
+                switch (operationKey)
                 {
-                    context.RegisterCodeFix(
-                        new DoNotCreateStringsForComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, negate),
-                        context.Diagnostics);
+                    case DoNotCreateStringsForComparisonAnalyzer.OperationBinary:
+                        {
+                            if (TryGetReplacementSyntaxForBinaryOperation(node, out var leftNode, out var rightnode, out var stringComparisons))
+                            {
+                                var shouldNegateKey = properties.ContainsKey(DoNotCreateStringsForComparisonAnalyzer.ShouldNegateKey);
+
+                                foreach (var stringComparison in stringComparisons)
+                                {
+                                    context.RegisterCodeFix(
+                                        new DoNotCreateStringsForComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, shouldNegateKey),
+                                        context.Diagnostics);
+                                }
+                            }
+
+                            break;
+                        }
+                    case DoNotCreateStringsForComparisonAnalyzer.OperationSwitch:
+                        {
+                            // No fix available.
+
+                            break;
+                        }
+                    default:
+                        {
+                            if (TryGetReplacementSyntax(node, out var leftNode, out var rightnode, out var stringComparisons, out var negate))
+                            {
+                                foreach (var stringComparison in stringComparisons)
+                                {
+                                    context.RegisterCodeFix(
+                                        new DoNotCreateStringsForComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, negate),
+                                        context.Diagnostics);
+                                }
+                            }
+
+                            break;
+                        }
                 }
             }
         }
 
+        protected abstract bool TryGetReplacementSyntaxForBinaryOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
         protected abstract bool TryGetReplacementSyntax(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons, out bool negate);
 
         private class DoNotCreateStringsForComparisonCodeAction : CodeAction

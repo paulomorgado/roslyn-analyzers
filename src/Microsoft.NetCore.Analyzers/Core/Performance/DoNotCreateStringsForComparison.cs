@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Linq.Expressions;
 using Analyzer.Utilities;
 using Analyzer.Utilities.Extensions;
 using Microsoft.CodeAnalysis;
@@ -20,16 +18,25 @@ namespace Microsoft.NetCore.Analyzers.Performance
     public sealed class DoNotCreateStringsForComparisonAnalyzer : DiagnosticAnalyzer
     {
         internal const string RuleId = "CA1830";
-        internal const string ToLowerCaseChangingMethodName = nameof(string.ToLower);
-        internal const string ToUpperCaseChangingMethodName = nameof(string.ToUpper);
-        internal const string ToLowerInvariantCaseChangingMethodName = nameof(string.ToLowerInvariant);
-        internal const string ToUpperInvariantCaseChangingMethodName = nameof(string.ToUpperInvariant);
+        internal const string OperationKey = nameof(OperationKey);
+        internal const string ShouldNegateKey = nameof(ShouldNegateKey);
+        internal const string OperationEqualsInstance = nameof(OperationEqualsInstance);
+        internal const string OperationEqualsStatic = nameof(OperationEqualsStatic);
+        internal const string OperationBinary = nameof(OperationBinary);
+        internal const string OperationSwitch = nameof(OperationSwitch);
+        internal const string ToLowerCurrentCultureCaseChangingMethodName = nameof(string.ToLower);
+        internal const string ToUpperCurrentCultureCaseChangingMethodName = nameof(string.ToUpper);
+        internal const string ToLowerInvariantCultureCaseChangingMethodName = nameof(string.ToLowerInvariant);
+        internal const string ToUpperInvariantCultureCaseChangingMethodName = nameof(string.ToUpperInvariant);
+        internal const string InvariantCultureIgnoreCase = "InvariantCultureIgnoreCase";
+        internal const string CurrentCultureIgnoreCase = nameof(StringComparison.CurrentCultureIgnoreCase);
+        internal const string OrdinalIgnoreCase = nameof(StringComparison.OrdinalIgnoreCase);
         private static readonly LocalizableString s_localizableTitle = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotCreateStringsForComparisonTitle), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
         private static readonly LocalizableString s_localizableMessage = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotCreateStringsForComparisonMessage), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
         private static readonly LocalizableString s_localizableDescription = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotCreateStringsForComparisonDescription), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
 
 #pragma warning disable CA1308 // Normalize strings to uppercase
-        internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+        internal static readonly DiagnosticDescriptor s_rule = new DiagnosticDescriptor(
             RuleId,
             s_localizableTitle,
             s_localizableMessage,
@@ -42,10 +49,23 @@ namespace Microsoft.NetCore.Analyzers.Performance
 #pragma warning restore CA1308 // Normalize strings to uppercase
 
         internal static readonly ImmutableArray<string> CaseChangingMethodNames = ImmutableArray.Create(
-            ToLowerCaseChangingMethodName,
-            ToUpperCaseChangingMethodName,
-            ToLowerInvariantCaseChangingMethodName,
-            ToUpperInvariantCaseChangingMethodName);
+            ToLowerCurrentCultureCaseChangingMethodName,
+            ToUpperCurrentCultureCaseChangingMethodName,
+            ToLowerInvariantCultureCaseChangingMethodName,
+            ToUpperInvariantCultureCaseChangingMethodName);
+
+        internal static readonly ImmutableArray<string> InvariantCultureCaseChangingMethodNames = ImmutableArray.Create(
+            ToLowerInvariantCultureCaseChangingMethodName,
+            ToUpperInvariantCultureCaseChangingMethodName);
+
+        internal static readonly ImmutableArray<string> CurrentCultureCaseChangingMethodNames = ImmutableArray.Create(
+            ToLowerCurrentCultureCaseChangingMethodName,
+            ToUpperCurrentCultureCaseChangingMethodName);
+
+        internal static readonly ImmutableArray<string> StringComparisonModes = ImmutableArray.Create(
+            InvariantCultureIgnoreCase,
+            CurrentCultureIgnoreCase,
+            OrdinalIgnoreCase);
 
         internal static readonly ImmutableArray<string> CultureInfoProperties = ImmutableArray.Create(
             nameof(System.Globalization.CultureInfo.CurrentCulture),
@@ -55,7 +75,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         /// Returns a set of descriptors for the diagnostics that this analyzer is capable of producing.
         /// </summary>
         /// <value>The supported diagnostics.</value>
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(s_rule);
 
         /// <summary>
         /// Initializes the specified analysis context.
@@ -75,30 +95,61 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 {
                     var binaryOperation = (IBinaryOperation)operationAnalysisContext.Operation;
 
-                    if (IsEqualityOperation(binaryOperation) &&
+                    if ((isEqualityBinaryOperation(binaryOperation) || isInequalityOperationtyBinary(binaryOperation)) &&
                         (hasCaseChangingMethodInvocation(binaryOperation.LeftOperand) ||
                             hasCaseChangingMethodInvocation(binaryOperation.RightOperand)))
                     {
+                        var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                        propertiesBuilder.Add(OperationKey, OperationBinary);
+                        if (isInequalityOperationtyBinary(binaryOperation)) propertiesBuilder.Add(ShouldNegateKey, null);
+                        var properties = propertiesBuilder.ToImmutable();
+
                         operationAnalysisContext.ReportDiagnostic(
                             binaryOperation.Syntax.CreateDiagnostic(
-                                Rule));
+                                rule: s_rule,
+                                properties: properties));
                     }
                 }, OperationKind.BinaryOperator);
 
                 compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
                 {
-                    var invocationOperation = (IInvocationOperation)operationAnalysisContext.Operation;
+                    var switchOperation = (ISwitchOperation)operationAnalysisContext.Operation;
 
-                    if (isEqualsMethodInvocation(invocationOperation) &&
-                        (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation) ||
-                            isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)))
+                    if (hasCaseChangingMethodInvocation(switchOperation.Value))
                     {
-                        operationAnalysisContext.ReportDiagnostic(
-                            invocationOperation.Syntax.CreateDiagnostic(
-                                Rule));
-                    }
+                        var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                        propertiesBuilder.Add(OperationKey, OperationSwitch);
+                        var properties = propertiesBuilder.ToImmutable();
 
-                }, OperationKind.Invocation);
+                        operationAnalysisContext.ReportDiagnostic(
+                            switchOperation.Value.Syntax.CreateDiagnostic(
+                                rule: s_rule,
+                                properties: properties));
+                    }
+                }, OperationKind.Switch);
+
+                compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
+                    {
+                        var invocationOperation = (IInvocationOperation)operationAnalysisContext.Operation;
+
+                        if (isEqualsMethodInvocation(invocationOperation) &&
+                            (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation) ||
+                                isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)))
+                        {
+                            operationAnalysisContext.ReportDiagnostic(
+                                invocationOperation.Syntax.CreateDiagnostic(
+                                    s_rule));
+                        }
+
+                    }, OperationKind.Invocation);
+
+                bool isEqualityBinaryOperation(IBinaryOperation binaryOperation)
+                   => binaryOperation.OperatorKind == BinaryOperatorKind.Equals ||
+                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueEquals;
+
+                bool isInequalityOperationtyBinary(IBinaryOperation binaryOperation)
+                   => binaryOperation.OperatorKind == BinaryOperatorKind.NotEquals ||
+                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueNotEquals;
 
                 bool hasCaseChangingMethodInvocation(IOperation operation)
                     => operation.Type.Equals(stringType) &&
@@ -127,9 +178,5 @@ namespace Microsoft.NetCore.Analyzers.Performance
                         invocationOperation.TargetMethod.ContainingType.Equals(stringType);
             });
         }
-
-        private static bool IsEqualityOperation(IBinaryOperation binaryOperation)
-            => binaryOperation.OperatorKind != BinaryOperatorKind.Equals ||
-                binaryOperation.OperatorKind != BinaryOperatorKind.NotEquals;
     }
 }

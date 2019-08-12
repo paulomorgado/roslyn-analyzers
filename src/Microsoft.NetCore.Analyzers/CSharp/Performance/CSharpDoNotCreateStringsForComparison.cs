@@ -16,20 +16,29 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
     public sealed class CSharpDoNotCreateStringsForComparisonFixer
         : DoNotCreateStringsForComparisonFixer
     {
+        protected override bool TryGetReplacementSyntaxForBinaryOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons)
+        {
+            if (node is BinaryExpressionSyntax binaryExpression)
+            {
+                GetCaseChangingInvocation(binaryExpression.Left, out leftNode, out var leftStringComparisons);
+                GetCaseChangingInvocation(binaryExpression.Right, out rightnode, out var rightStringComparisons);
+
+                stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
+
+                return true;
+            }
+
+            leftNode = default;
+            rightnode = default;
+            stringComparisons = ImmutableArray<string>.Empty;
+
+            return false;
+        }
+
         protected override bool TryGetReplacementSyntax(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons, out bool negate)
         {
             switch (node)
             {
-                case BinaryExpressionSyntax binaryExpression:
-                    {
-                        GetCaseChangingInvocation(binaryExpression.Left, out leftNode, out var leftStringComparisons);
-                        GetCaseChangingInvocation(binaryExpression.Right, out rightnode, out var rightStringComparisons);
-
-                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
-                        negate = binaryExpression.IsKind(SyntaxKind.NotEqualsExpression);
-
-                        return true;
-                    }
                 case InvocationExpressionSyntax invocationExpression when TryGetEqualsArguments(invocationExpression, out var argument1, out var argument2):
                     {
                         GetCaseChangingInvocation(argument1, out leftNode, out var leftStringComparisons);
@@ -57,16 +66,16 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             {
                 switch (memberAccessExpression.Name.Identifier.ValueText)
                 {
-                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCaseChangingMethodName:
-                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCultureCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCultureCaseChangingMethodName:
 
                         expression = memberAccessExpression.Expression;
                         stringComparisons = InvariantCulture;
 
                         return;
 
-                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerCaseChangingMethodName:
-                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName:
 
                         expression = memberAccessExpression.Expression;
                         stringComparisons = GetComparisonsFromArguments(invocationExpression.ArgumentList);
