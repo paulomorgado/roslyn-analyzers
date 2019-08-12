@@ -20,8 +20,10 @@ namespace Microsoft.NetCore.Analyzers.Performance
         internal const string RuleId = "CA1830";
         internal const string OperationKey = nameof(OperationKey);
         internal const string ShouldNegateKey = nameof(ShouldNegateKey);
-        internal const string OperationEqualsInstance = nameof(OperationEqualsInstance);
-        internal const string OperationEqualsStatic = nameof(OperationEqualsStatic);
+        internal const string OperationEqualsInstanceWithComparison = nameof(OperationEqualsInstanceWithComparison);
+        internal const string OperationEqualsInstanceWithoutComparison = nameof(OperationEqualsInstanceWithoutComparison);
+        internal const string OperationEqualsStaticWithComparison = nameof(OperationEqualsStaticWithComparison);
+        internal const string OperationEqualsStaticWithoutComparison = nameof(OperationEqualsStaticWithoutComparison);
         internal const string OperationBinary = nameof(OperationBinary);
         internal const string OperationSwitch = nameof(OperationSwitch);
         internal const string ToLowerCurrentCultureCaseChangingMethodName = nameof(string.ToLower);
@@ -112,21 +114,21 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 }, OperationKind.BinaryOperator);
 
                 compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
-                {
-                    var switchOperation = (ISwitchOperation)operationAnalysisContext.Operation;
-
-                    if (hasCaseChangingMethodInvocation(switchOperation.Value))
                     {
-                        var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
-                        propertiesBuilder.Add(OperationKey, OperationSwitch);
-                        var properties = propertiesBuilder.ToImmutable();
+                        var switchOperation = (ISwitchOperation)operationAnalysisContext.Operation;
 
-                        operationAnalysisContext.ReportDiagnostic(
-                            switchOperation.Value.Syntax.CreateDiagnostic(
-                                rule: s_rule,
-                                properties: properties));
-                    }
-                }, OperationKind.Switch);
+                        if (hasCaseChangingMethodInvocation(switchOperation.Value))
+                        {
+                            var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                            propertiesBuilder.Add(OperationKey, OperationSwitch);
+                            var properties = propertiesBuilder.ToImmutable();
+
+                            operationAnalysisContext.ReportDiagnostic(
+                                switchOperation.Value.Syntax.CreateDiagnostic(
+                                    rule: s_rule,
+                                    properties: properties));
+                        }
+                    }, OperationKind.Switch);
 
                 compilationStartAnalysisContext.RegisterOperationAction(operationAnalysisContext =>
                     {
@@ -134,11 +136,17 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
                         if (isEqualsMethodInvocation(invocationOperation) &&
                             (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation) ||
-                                isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)))
+                                isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)) &&
+                            getEqualsInvocationOperationKey(invocationOperation) is string operationKey)
                         {
+                            var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                            propertiesBuilder.Add(OperationKey, operationKey);
+                            var properties = propertiesBuilder.ToImmutable();
+
                             operationAnalysisContext.ReportDiagnostic(
                                 invocationOperation.Syntax.CreateDiagnostic(
-                                    s_rule));
+                                    rule: s_rule,
+                                    properties: properties));
                         }
 
                     }, OperationKind.Invocation);
@@ -176,6 +184,21 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 bool isEqualsMethodInvocation(IInvocationOperation invocationOperation)
                     => invocationOperation.TargetMethod.Name.Equals(nameof(string.Equals), StringComparison.Ordinal) &&
                         invocationOperation.TargetMethod.ContainingType.Equals(stringType);
+
+                string getEqualsInvocationOperationKey(IInvocationOperation invocationOperation)
+                {
+                    switch (invocationOperation.Instance)
+                    {
+                        case null:
+                            return (invocationOperation.Arguments.Length == 2)
+                                ? OperationEqualsStaticWithoutComparison
+                                : OperationEqualsStaticWithComparison;
+                        case IOperation instance:
+                            return (invocationOperation.Arguments.Length == 1)
+                                ? OperationEqualsInstanceWithoutComparison
+                                : OperationEqualsInstanceWithComparison;
+                    }
+                }
             });
         }
     }

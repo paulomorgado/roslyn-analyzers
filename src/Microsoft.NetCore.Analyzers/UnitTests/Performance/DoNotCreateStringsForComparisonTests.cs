@@ -131,10 +131,10 @@ class C
 {{
     void M()
     {{
-        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
-        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
-        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
-        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -145,7 +145,51 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXStringEquals2(string expectedStringComparison)
+        public static Task ToXInstanceEquals2(string expectedStringComparison)
+            => new VerifyCS.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        _ = [|""y"".ToUpper().Equals(""x"", StringComparison.{expectedStringComparison})|];
+        _ = [|""x"".Equals(""y"".ToUpper(), StringComparison.{expectedStringComparison})|];
+        _ = [|""y"".ToLower().Equals(""x"", StringComparison.{expectedStringComparison})|];
+        _ = [|""x"".Equals(""y"".ToLower(), StringComparison.{expectedStringComparison})|];
+    }}
+}}
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
+    }}
+}}
+",
+                    },
+                },
+                CodeFixEquivalenceKey = $"StringComparison.{expectedStringComparison}",
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXStringEqualsStatic2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -189,7 +233,51 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXSystemStringEquals2(string expectedStringComparison)
+        public static Task ToXStringEqualsStatic3(string expectedStringComparison)
+            => new VerifyCS.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        _ = [|string.Equals(""y"".ToUpper(), ""x"", StringComparison.{expectedStringComparison})|];
+        _ = [|string.Equals(""x"", ""y"".ToUpper(), StringComparison.{expectedStringComparison})|];
+        _ = [|string.Equals(""y"".ToLower(), ""x"", StringComparison.{expectedStringComparison})|];
+        _ = [|string.Equals(""x"", ""y"".ToLower(), StringComparison.{expectedStringComparison})|];
+    }}
+}}
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+    }}
+}}
+",
+                    },
+                },
+                CodeFixEquivalenceKey = $"StringComparison.{expectedStringComparison}",
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task ToXSystemStringEqualsStatic2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -417,44 +505,6 @@ class C
         _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
     }}
 }}
-",
-                    },
-                },
-            }.RunAsync();
-
-        [Fact]
-        public static Task MixedBinaryTests()
-            => new VerifyCS.Test
-            {
-                TestState =
-                {
-                    Sources =
-                    {
-                        @"using System;
-class C
-{
-    void M()
-    {
-        _ = [|""y"".ToUpperInvariant() == ""x"".ToLower()|];
-        _ = [|""y"".ToUpper() == ""x"".ToLowerInvariant()|];
-    }
-}
-",
-                    },
-                },
-                FixedState =
-                {
-                    Sources =
-                    {
-                        @"using System;
-class C
-{
-    void M()
-    {
-        _ = string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
-        _ = string.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase);
-    }
-}
 ",
                     },
                 },
