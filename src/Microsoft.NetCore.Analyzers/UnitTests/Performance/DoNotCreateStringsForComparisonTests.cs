@@ -39,17 +39,35 @@ namespace Microsoft.NetCore.Analyzers.Performance.UnitTests
             { nameof(CultureInfo.CurrentCulture), "CurrentCultureIgnoreCase" },
         };
 
-        public static TheoryData< string> Switch_TheoryData = new TheoryData<string>
+        public static TheoryData<string> Switch_TheoryData = new TheoryData<string>
         {
             { "ToLowerInvariant()" },
             { "ToUpper(System.Globalization.CultureInfo.CurrentCulture)" },
             { "ToUpper(System.Globalization.CultureInfo.InvariantCulture)" },
         };
+
+        public static TheoryData<string, string, string, string, string> MixedEqualsComparison_TheoryData = new TheoryData<string, string, string, string, string>
+        {
+            { "\"x\"", "ToUpperInvariant()", "\"y\"", "ToLowerInvariant()", "InvariantCultureIgnoreCase" },
+            { "\"x\"", "ToUpper()", "\"y\"", "ToLowerInvariant()", "InvariantCultureIgnoreCase" },
+            { "\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower()", "InvariantCultureIgnoreCase" },
+            { "\"x\"", "ToUpper()", "\"y\"", "ToLower()", "OrdinalIgnoreCase" },
+            { "\"x\"", "ToUpper()", "\"y\"", "ToLower()", "InvariantCultureIgnoreCase" },
+            { "\"x\"", "ToUpper()", "\"y\"", "ToLower()", "CurrentCultureIgnoreCase" },
+        };
+
+        public static TheoryData<string, string, string, string> MixedEqualsComparison_Diagnostic_NoFix_TheoryData = new TheoryData<string, string, string, string>
+        {
+            { "\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLowerInvariant()" },
+            { "\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)" },
+            { "\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)" },
+            { "\"x\"", "ToUpper(System.Globalization.CultureInfo.InvariantCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)" },
+        };
 #pragma warning restore CA2211 // Non-constant fields should not be visible
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXComparison(string expectedStringComparison)
+        public static Task CSharp_ToXComparison(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -101,7 +119,57 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXInstanceEquals1(string expectedStringComparison)
+        public static Task Basic_ToXComparison(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|""y"".ToUpper() = ""x""|]
+        b = [|""x"" = ""y"".ToUpper()|]
+        b = [|""y"".ToUpper() <> ""x""|]
+        b = [|""x"" <> ""y"".ToUpper()|]
+        b = [|""y"".ToLower() = ""x""|]
+        b = [|""x"" = ""y"".ToLower()|]
+        b = [|""y"".ToLower() <> ""x""|]
+        b = [|""x"" <> ""y"".ToLower()|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task CSharp_ToXInstanceEquals1(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -145,7 +213,49 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXInstanceEquals2(string expectedStringComparison)
+        public static Task Basic_ToXInstanceEquals1(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|""y"".ToUpper().Equals(""x"")|]
+        b = [|""x"".Equals(""y"".ToUpper())|]
+        b = [|""y"".ToLower().Equals(""x"")|]
+        b = [|""x"".Equals(""y"".ToLower())|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = ""y"".Equals(""x"", StringComparison.{expectedStringComparison})
+        b = ""x"".Equals(""y"", StringComparison.{expectedStringComparison})
+        b = ""y"".Equals(""x"", StringComparison.{expectedStringComparison})
+        b = ""x"".Equals(""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task CSharp_ToXInstanceEquals2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -189,7 +299,49 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXStringEqualsStatic2(string expectedStringComparison)
+        public static Task Bash_ToXInstanceEquals2(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|""y"".ToUpper().Equals(""x"", StringComparison.{expectedStringComparison})|]
+        b = [|""x"".Equals(""y"".ToUpper(), StringComparison.{expectedStringComparison})|]
+        b = [|""y"".ToLower().Equals(""x"", StringComparison.{expectedStringComparison})|]
+        b = [|""x"".Equals(""y"".ToLower(), StringComparison.{expectedStringComparison})|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = ""y"".Equals(""x"", StringComparison.{expectedStringComparison})
+        b = ""x"".Equals(""y"", StringComparison.{expectedStringComparison})
+        b = ""y"".Equals(""x"", StringComparison.{expectedStringComparison})
+        b = ""x"".Equals(""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = $"StringComparison.{expectedStringComparison}",
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task CSharp_ToXStringEqualsStatic2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -233,7 +385,49 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXStringEqualsStatic3(string expectedStringComparison)
+        public static Task Basic_ToXStringEqualsStatic2(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|String.Equals(""y"".ToUpper(), ""x"")|]
+        b = [|String.Equals(""x"", ""y"".ToUpper())|]
+        b = [|String.Equals(""y"".ToLower(), ""x"")|]
+        b = [|String.Equals(""x"", ""y"".ToLower())|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task CSharp_ToXStringEqualsStatic3(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -277,7 +471,49 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task ToXSystemStringEqualsStatic2(string expectedStringComparison)
+        public static Task Basic_ToXStringEqualsStatic3(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|String.Equals(""y"".ToUpper(), ""x"", StringComparison.{expectedStringComparison})|]
+        b = [|String.Equals(""x"", ""y"".ToUpper(), StringComparison.{expectedStringComparison})|]
+        b = [|String.Equals(""y"".ToLower(), ""x"", StringComparison.{expectedStringComparison})|]
+        b = [|String.Equals(""x"", ""y"".ToLower(), StringComparison.{expectedStringComparison})|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = $"StringComparison.{expectedStringComparison}",
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task CSharp_ToXSystemStringEqualsStatic2(string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -320,8 +556,50 @@ class C
             }.RunAsync();
 
         [Theory]
+        [MemberData(nameof(StringComparison_TheoryData))]
+        public static Task Bash_ToXSystemStringEqualsStatic2(string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|Global.System.String.Equals(""y"".ToUpper(), ""x"")|]
+        b = [|System.String.Equals(""x"", ""y"".ToUpper())|]
+        b = [|String.Equals(""y"".ToLower(), ""x"")|]
+        b = [|String.Equals(""x"", ""y"".ToLower())|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Theory]
         [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
-        public static Task ToXWithCultureInfoPropertyComparisonNonCaseChanging(string cultureInfo, string expectedStringComparison)
+        public static Task CSharp_ToXWithCultureInfoPropertyComparisonNonCaseChanging(string cultureInfo, string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -371,8 +649,58 @@ class C
                 CodeFixEquivalenceKey = expectedStringComparison,
             }.RunAsync();
 
+        [Theory]
+        [MemberData(nameof(ToXWithCultureInfo_NonCaseChanging_TheoryData))]
+        public static Task Basic_ToXWithCultureInfoPropertyComparisonNonCaseChanging(string cultureInfo, string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo}) = ""x""|]
+        b = [|""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo}) <> ""x""|]
+        b = [|""x"" = ""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo})|]
+        b = [|""x"" <> ""y"".ToUpper(System.Globalization.CultureInfo.{cultureInfo})|]
+        b = [|""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo}) = ""x""|]
+        b = [|""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo}) <> ""x""|]
+        b = [|""x"" = ""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo})|]
+        b = [|""x"" <> ""y"".ToLower(System.Globalization.CultureInfo.{cultureInfo})|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
         [Fact]
-        public static Task ToXWithCustomCultureInfoomparisonNonCaseChanging()
+        public static Task CSharp_ToXWithCustomCultureInfoomparisonNonCaseChanging()
             => new VerifyCS.Test
             {
                 TestState =
@@ -399,9 +727,36 @@ class C
                 },
             }.RunAsync();
 
+        [Fact]
+        public static Task Basic_ToXWithCustomCultureInfoomparisonNonCaseChanging()
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x"")) = ""x""
+        b = ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x"")) <> ""x""
+        b = ""x"" = ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x""))
+        b = ""x"" <> ""y"".ToUpper(System.Globalization.CultureInfo.GetCultureInfo(""x""))
+        b = ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x"")) = ""x""
+        b = ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x"")) <> ""x""
+        b = ""x"" = ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x""))
+        b = ""x"" <> ""y"".ToLower(System.Globalization.CultureInfo.GetCultureInfo(""x""))
+    End Sub
+End Module
+",
+                    },
+                },
+            }.RunAsync();
+
         [Theory]
         [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task ToXInvariantComparisonNonCaseChanging(string @case)
+        public static Task CSharp_ToXInvariantComparisonNonCaseChanging(string @case)
             => VerifyCS.VerifyCodeFixAsync($@"using System;
 class C
 {{
@@ -427,14 +782,51 @@ class C
 }
 ");
 
+
         [Theory]
-        [InlineData("\"x\"", "ToUpperInvariant()", "\"y\"", "ToLowerInvariant()", "InvariantCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper()", "\"y\"", "ToLowerInvariant()", "InvariantCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower()", "InvariantCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper()", "\"y\"", "ToLower()", "OrdinalIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper()", "\"y\"", "ToLower()", "InvariantCultureIgnoreCase")]
-        [InlineData("\"x\"", "ToUpper()", "\"y\"", "ToLower()", "CurrentCultureIgnoreCase")]
-        public static Task MixedEqualsComparisonTests(string left, string leftInvocation, string right, string rightInvocation, string expectedStringComparison)
+        [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
+        public static Task Bash_ToXInvariantComparisonNonCaseChanging(string @case)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|""y"".To{@case}Invariant() = ""x""|]
+        b = [|""y"".To{@case}Invariant() <> ""x""|]
+        b = [|""x"" = ""y"".To{@case}Invariant()|]
+        b = [|""x"" <> ""y"".To{@case}Invariant()|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase)
+        b = Not String.Equals(""y"", ""x"", StringComparison.InvariantCultureIgnoreCase)
+        b = String.Equals(""x"", ""y"", StringComparison.InvariantCultureIgnoreCase)
+        b = Not String.Equals(""x"", ""y"", StringComparison.InvariantCultureIgnoreCase)
+    End Sub
+End Module
+",
+                    },
+                },
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(MixedEqualsComparison_TheoryData))]
+        public static Task CSharp_MixedEqualsComparisonTests(string left, string leftInvocation, string right, string rightInvocation, string expectedStringComparison)
             => new VerifyCS.Test
             {
                 TestState =
@@ -447,6 +839,7 @@ class C
     void M()
     {{
         _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+        _ = [|{left}.{leftInvocation} != {right}.{rightInvocation}|];
     }}
 }}
 ",
@@ -462,6 +855,7 @@ class C
     void M()
     {{
         _ = string.Equals({left}, {right}, StringComparison.{expectedStringComparison});
+        _ = !string.Equals({left}, {right}, StringComparison.{expectedStringComparison});
     }}
 }}
 ",
@@ -471,11 +865,46 @@ class C
             }.RunAsync();
 
         [Theory]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLowerInvariant()")]
-        [InlineData("\"x\"", "ToUpperInvariant()", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)")]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.CurrentCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.InvariantCulture)")]
-        [InlineData("\"x\"", "ToUpper(System.Globalization.CultureInfo.InvariantCulture)", "\"y\"", "ToLower(System.Globalization.CultureInfo.CurrentCulture)")]
-        public static Task MixedEqualsComparison_Diagnostic_NoFix(string left, string leftInvocation, string right, string rightInvocation)
+        [MemberData(nameof(MixedEqualsComparison_TheoryData))]
+        public static Task Basic_MixedEqualsComparisonTests(string left, string leftInvocation, string right, string rightInvocation, string expectedStringComparison)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|{left}.{leftInvocation} = {right}.{rightInvocation}|]
+        b = [|{left}.{leftInvocation} <> {right}.{rightInvocation}|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = String.Equals({left}, {right}, StringComparison.{expectedStringComparison})
+        b = Not String.Equals({left}, {right}, StringComparison.{expectedStringComparison})
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(MixedEqualsComparison_Diagnostic_NoFix_TheoryData))]
+        public static Task CSharp_MixedEqualsComparison_Diagnostic_NoFix(string left, string leftInvocation, string right, string rightInvocation)
             => new VerifyCS.Test
             {
                 TestState =
@@ -488,6 +917,7 @@ class C
     void M()
     {{
         _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+        _ = [|{left}.{leftInvocation} != {right}.{rightInvocation}|];
     }}
 }}
 ",
@@ -503,6 +933,7 @@ class C
     void M()
     {{
         _ = [|{left}.{leftInvocation} == {right}.{rightInvocation}|];
+        _ = [|{left}.{leftInvocation} != {right}.{rightInvocation}|];
     }}
 }}
 ",
@@ -510,9 +941,47 @@ class C
                 },
             }.RunAsync();
 
+
+        [Theory]
+        [MemberData(nameof(MixedEqualsComparison_Diagnostic_NoFix_TheoryData))]
+        public static Task Basic_MixedEqualsComparison_Diagnostic_NoFix(string left, string leftInvocation, string right, string rightInvocation)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|{left}.{leftInvocation} = {right}.{rightInvocation}|]
+        b = [|{left}.{leftInvocation} <> {right}.{rightInvocation}|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim b As Boolean
+        b = [|{left}.{leftInvocation} = {right}.{rightInvocation}|]
+        b = [|{left}.{leftInvocation} <> {right}.{rightInvocation}|]
+    End Sub
+End Module
+",
+                    },
+                },
+            }.RunAsync();
+
         [Theory]
         [MemberData(nameof(Switch_TheoryData))]
-        public static Task SwitchTests(string invocation)
+        public static Task CSharp_SwitchTests(string invocation)
             => new VerifyCS.Test
             {
                 TestState =
@@ -529,6 +998,28 @@ class C
         }}
     }}
 }}
+",
+                    },
+                },
+            }.RunAsync();
+
+        [Theory]
+        [MemberData(nameof(Switch_TheoryData))]
+        public static Task Basic_SwitchTests(string invocation)
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M(key as String)
+        Dim b As Boolean
+        Select Case [|key.{invocation}|]
+        End Select
+    End Sub
+End Module
 ",
                     },
                 },

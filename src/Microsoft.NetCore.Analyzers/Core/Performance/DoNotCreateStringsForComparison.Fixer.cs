@@ -142,7 +142,6 @@ namespace Microsoft.NetCore.Analyzers.Performance
         protected abstract bool TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
         protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out SyntaxNode comparisonNode);
         protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
-        protected abstract bool TryGetReplacementSyntax(SyntaxNode node, string operation, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
 
         private abstract class DoNotCreateStringsForComparisonCodeAction : CodeAction
         {

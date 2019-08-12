@@ -3,9 +3,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.NetCore.Analyzers.Performance;
@@ -16,12 +14,12 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
     public sealed class CSharpDoNotCreateStringsForComparisonFixer
         : DoNotCreateStringsForComparisonFixer
     {
-        protected override bool TryGetReplacementSyntaxForBinaryOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons)
+        protected sealed override bool TryGetReplacementSyntaxForBinaryOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightNode, out ImmutableArray<string> stringComparisons)
         {
             if (node is BinaryExpressionSyntax binaryExpression)
             {
                 GetCaseChangingInvocation(binaryExpression.Left, out leftNode, out var leftStringComparisons);
-                GetCaseChangingInvocation(binaryExpression.Right, out rightnode, out var rightStringComparisons);
+                GetCaseChangingInvocation(binaryExpression.Right, out rightNode, out var rightStringComparisons);
 
                 stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
 
@@ -29,19 +27,19 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             leftNode = default;
-            rightnode = default;
+            rightNode = default;
             stringComparisons = ImmutableArray<string>.Empty;
 
             return false;
         }
 
-        protected override bool TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out SyntaxNode comparisonNode)
+        protected sealed override bool TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightNode, out SyntaxNode comparisonNode)
         {
             if (node is InvocationExpressionSyntax invocationExpression &&
                 invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
             {
-                GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode, out _);
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightnode, out _);
+                GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode);
+                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightNode);
 
                 comparisonNode = invocationExpression.ArgumentList.Arguments[1].Expression;
 
@@ -49,19 +47,19 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             leftNode = default;
-            rightnode = default;
+            rightNode = default;
             comparisonNode = null;
 
             return false;
         }
 
-        protected override bool TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons)
+        protected sealed override bool TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightNode, out ImmutableArray<string> stringComparisons)
         {
             if (node is InvocationExpressionSyntax invocationExpression &&
                 invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
             {
                 GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode, out var leftStringComparisons);
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightnode, out var rightStringComparisons);
+                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightNode, out var rightStringComparisons);
 
                 stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
 
@@ -69,18 +67,18 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             leftNode = default;
-            rightnode = default;
+            rightNode = default;
             stringComparisons = ImmutableArray<string>.Empty;
 
             return false;
         }
 
-        protected override bool TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out SyntaxNode comparisonNode)
+        protected sealed override bool TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightNode, out SyntaxNode comparisonNode)
         {
             if (node is InvocationExpressionSyntax invocationExpression)
             {
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out leftNode, out _);
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[1].Expression, out rightnode, out _);
+                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out leftNode);
+                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[1].Expression, out rightNode);
 
                 comparisonNode = invocationExpression.ArgumentList.Arguments[2].Expression;
 
@@ -88,18 +86,18 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             leftNode = default;
-            rightnode = default;
+            rightNode = default;
             comparisonNode = null;
 
             return false;
         }
 
-        protected override bool TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons)
+        protected sealed override bool TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightNode, out ImmutableArray<string> stringComparisons)
         {
             if (node is InvocationExpressionSyntax invocationExpression)
             {
                 GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out leftNode, out var leftStringComparisons);
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[1].Expression, out rightnode, out var rightStringComparisons);
+                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[1].Expression, out rightNode, out var rightStringComparisons);
 
                 stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
 
@@ -107,29 +105,7 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             leftNode = default;
-            rightnode = default;
-            stringComparisons = ImmutableArray<string>.Empty;
-
-            return false;
-        }
-
-        protected override bool TryGetReplacementSyntax(SyntaxNode node, string operation, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons)
-        {
-            switch (node)
-            {
-                case InvocationExpressionSyntax invocationExpression when TryGetEqualsArguments(invocationExpression, out var argument1, out var argument2):
-                    {
-                        GetCaseChangingInvocation(argument1, out leftNode, out var leftStringComparisons);
-                        GetCaseChangingInvocation(argument2, out rightnode, out var rightStringComparisons);
-
-                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
-
-                        return true;
-                    }
-            }
-
-            leftNode = default;
-            rightnode = default;
+            rightNode = default;
             stringComparisons = ImmutableArray<string>.Empty;
 
             return false;
@@ -164,6 +140,27 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             stringComparisons = All;
         }
 
+        private static void GetCaseChangingInvocation(SyntaxNode node, out SyntaxNode expression)
+        {
+            if (node is InvocationExpressionSyntax invocationExpression &&
+                invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
+            {
+                switch (memberAccessExpression.Name.Identifier.ValueText)
+                {
+                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCultureCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCultureCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName:
+                    case DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName:
+
+                        expression = memberAccessExpression.Expression;
+
+                        return;
+                }
+            }
+
+            expression = node;
+        }
+
         private static ImmutableArray<string> GetComparisonsFromArguments(ArgumentListSyntax arguments)
         {
             if (arguments.Arguments.Count == 0)
@@ -187,32 +184,6 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             return ImmutableArray<string>.Empty;
-        }
-
-        private static bool TryGetEqualsArguments(InvocationExpressionSyntax invocation, out SyntaxNode argument1, out SyntaxNode argument2)
-        {
-            if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
-            {
-                if (memberAccess.Expression is PredefinedTypeSyntax ||
-                    memberAccess.Expression is MemberAccessExpressionSyntax type && type.Expression is NameSyntax ||
-                    memberAccess.Expression is NameSyntax)
-                {
-                    argument1 = invocation.ArgumentList.Arguments[0].Expression;
-                    argument2 = invocation.ArgumentList.Arguments[1].Expression;
-
-                    return true;
-                }
-
-                argument1 = memberAccess.Expression;
-                argument2 = invocation.ArgumentList.Arguments[0].Expression;
-
-                return true;
-            }
-
-            argument1 = default;
-            argument2 = default;
-
-            return false;
         }
     }
 }
