@@ -87,6 +87,15 @@ class C
         _ = [|""x"" == ""y"".ToLower()|];
         _ = [|""y"".ToLower() != ""x""|];
         _ = [|""x"" != ""y"".ToLower()|];
+
+        _ = [|""y""?.ToUpper() == ""x""|];
+        _ = [|""x"" == ""y""?.ToUpper()|];
+        _ = [|""y""?.ToUpper() != ""x""|];
+        _ = [|""x"" != ""y""?.ToUpper()|];
+        _ = [|""y""?.ToLower() == ""x""|];
+        _ = [|""x"" == ""y""?.ToLower()|];
+        _ = [|""y""?.ToLower() != ""x""|];
+        _ = [|""x"" != ""y""?.ToLower()|];
     }}
 }}
 ",
@@ -101,6 +110,15 @@ class C
 {{
     void M()
     {{
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = !string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+
         _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
         _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
         _ = !string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
@@ -138,6 +156,15 @@ Module C
         b = [|""x"" = ""y"".ToLower()|]
         b = [|""y"".ToLower() <> ""x""|]
         b = [|""x"" <> ""y"".ToLower()|]
+
+        b = [|""y""?.ToUpper() = ""x""|]
+        b = [|""x"" = ""y""?.ToUpper()|]
+        b = [|""y""?.ToUpper() <> ""x""|]
+        b = [|""x"" <> ""y""?.ToUpper()|]
+        b = [|""y""?.ToLower() = ""x""|]
+        b = [|""x"" = ""y""?.ToLower()|]
+        b = [|""y""?.ToLower() <> ""x""|]
+        b = [|""x"" <> ""y""?.ToLower()|]
     End Sub
 End Module
 ",
@@ -151,6 +178,15 @@ End Module
 Module C
     Sub M()
         Dim b As Boolean
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = Not String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+
         b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
         b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
         b = Not String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
@@ -529,6 +565,11 @@ class C
         _ = [|System.String.Equals(""x"", ""y"".ToUpper())|];
         _ = [|String.Equals(""y"".ToLower(), ""x"")|];
         _ = [|String.Equals(""x"", ""y"".ToLower())|];
+
+        _ = [|global::System.String.Equals(""y""?.ToUpper(), ""x"")|];
+        _ = [|System.String.Equals(""x"", ""y""?.ToUpper())|];
+        _ = [|String.Equals(""y""?.ToLower(), ""x"")|];
+        _ = [|String.Equals(""x"", ""y""?.ToLower())|];
     }}
 }}
 ",
@@ -543,6 +584,11 @@ class C
 {{
     void M()
     {{
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
+        _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
+
         _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
         _ = string.Equals(""x"", ""y"", StringComparison.{expectedStringComparison});
         _ = string.Equals(""y"", ""x"", StringComparison.{expectedStringComparison});
@@ -572,6 +618,11 @@ Module C
         b = [|System.String.Equals(""x"", ""y"".ToUpper())|]
         b = [|String.Equals(""y"".ToLower(), ""x"")|]
         b = [|String.Equals(""x"", ""y"".ToLower())|]
+
+        b = [|Global.System.String.Equals(""y""?.ToUpper(), ""x"")|]
+        b = [|System.String.Equals(""x"", ""y""?.ToUpper())|]
+        b = [|String.Equals(""y""?.ToLower(), ""x"")|]
+        b = [|String.Equals(""x"", ""y""?.ToLower())|]
     End Sub
 End Module
 ",
@@ -589,12 +640,125 @@ Module C
         b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
         b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
         b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""y"", ""x"", StringComparison.{expectedStringComparison})
+        b = String.Equals(""x"", ""y"", StringComparison.{expectedStringComparison})
     End Sub
 End Module
 ",
                     },
                 },
                 CodeFixEquivalenceKey = expectedStringComparison,
+            }.RunAsync();
+
+        [Fact]
+        public static Task CSharp_ToXSystemStringEqualsStatic3()
+            => new VerifyCS.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        var c = StringComparison.OrdinalIgnoreCase;
+        _ = [|global::System.String.Equals(""y"".ToUpper(), ""x"", c)|];
+        _ = [|System.String.Equals(""x"", ""y"".ToUpper(), c)|];
+        _ = [|String.Equals(""y"".ToLower(), ""x"", c)|];
+        _ = [|String.Equals(""x"", ""y"".ToLower(), c)|];
+
+        _ = [|global::System.String.Equals(""y""?.ToUpper(), ""x"", c)|];
+        _ = [|System.String.Equals(""x"", ""y""?.ToUpper(), c)|];
+        _ = [|String.Equals(""y""?.ToLower(), ""x"", c)|];
+        _ = [|String.Equals(""x"", ""y""?.ToLower(), c)|];
+    }}
+}}
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"using System;
+class C
+{{
+    void M()
+    {{
+        var c = StringComparison.OrdinalIgnoreCase;
+        _ = string.Equals(""y"", ""x"", c);
+        _ = string.Equals(""x"", ""y"", c);
+        _ = string.Equals(""y"", ""x"", c);
+        _ = string.Equals(""x"", ""y"", c);
+
+        _ = string.Equals(""y"", ""x"", c);
+        _ = string.Equals(""x"", ""y"", c);
+        _ = string.Equals(""y"", ""x"", c);
+        _ = string.Equals(""x"", ""y"", c);
+    }}
+}}
+",
+                    },
+                },
+                CodeFixEquivalenceKey = "c",
+            }.RunAsync();
+
+        [Fact]
+        public static Task Bash_ToXSystemStringEqualsStatic3()
+            => new VerifyVB.Test
+            {
+                TestState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim c = StringComparison.OrdinalIgnoreCase
+        Dim b As Boolean
+        b = [|Global.System.String.Equals(""y"".ToUpper(), ""x"", c)|]
+        b = [|System.String.Equals(""x"", ""y"".ToUpper(), c)|]
+        b = [|String.Equals(""y"".ToLower(), ""x"", c)|]
+        b = [|String.Equals(""x"", ""y"".ToLower(), c)|]
+
+        b = [|Global.System.String.Equals(""y""?.ToUpper(), ""x"", c)|]
+        b = [|System.String.Equals(""x"", ""y""?.ToUpper(), c)|]
+        b = [|String.Equals(""y""?.ToLower(), ""x"", c)|]
+        b = [|String.Equals(""x"", ""y""?.ToLower(), c)|]
+    End Sub
+End Module
+",
+                    },
+                },
+                FixedState =
+                {
+                    Sources =
+                    {
+                        $@"Imports System
+Module C
+    Sub M()
+        Dim c = StringComparison.OrdinalIgnoreCase
+        Dim b As Boolean
+        b = String.Equals(""y"", ""x"", c)
+        b = String.Equals(""x"", ""y"", c)
+        b = String.Equals(""y"", ""x"", c)
+        b = String.Equals(""x"", ""y"", c)
+
+        b = String.Equals(""y"", ""x"", c)
+        b = String.Equals(""x"", ""y"", c)
+        b = String.Equals(""y"", ""x"", c)
+        b = String.Equals(""x"", ""y"", c)
+    End Sub
+End Module
+",
+                    },
+                },
+                CodeFixEquivalenceKey = "c",
             }.RunAsync();
 
         [Theory]

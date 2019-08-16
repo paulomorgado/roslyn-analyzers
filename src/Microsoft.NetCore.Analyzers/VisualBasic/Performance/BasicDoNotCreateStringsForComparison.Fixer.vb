@@ -12,7 +12,11 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
     Public NotInheritable Class BasicDoNotCreateStringsForComparisonFixer
         Inherits DoNotCreateStringsForComparisonFixer
 
-        Protected Overrides Function TryGetReplacementSyntaxForBinaryOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightNode As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
+        Protected Overrides Function TryGetReplacementSyntaxForBinaryOperation(
+            node As SyntaxNode,
+            ByRef leftNode As SyntaxNode,
+            ByRef rightNode As SyntaxNode,
+            ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
 
             Dim binaryExpression = TryCast(node, BinaryExpressionSyntax)
 
@@ -34,7 +38,11 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Protected Overrides Function TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightNode As SyntaxNode, ByRef comparisonNode As SyntaxNode) As Boolean
+        Protected Overrides Function TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(
+            node As SyntaxNode,
+            ByRef leftNode As SyntaxNode,
+            ByRef rightNode As SyntaxNode,
+            ByRef comparisonNode As SyntaxNode) As Boolean
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -59,7 +67,11 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Protected Overrides Function TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightnode As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
+        Protected Overrides Function TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(
+            node As SyntaxNode,
+            ByRef leftNode As SyntaxNode,
+            ByRef rightNode As SyntaxNode,
+            ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -73,7 +85,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                     Dim rightStringComparisons As ImmutableArray(Of String) = Nothing
 
                     GetCaseChangingInvocation(memberAccessExpression.Expression, leftNode, leftStringComparisons)
-                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(0).GetExpression(), rightnode, rightStringComparisons)
+                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(0).GetExpression(), rightNode, rightStringComparisons)
 
                     stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray()
 
@@ -87,7 +99,11 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Protected Overrides Function TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightnode As SyntaxNode, ByRef comparisonNode As SyntaxNode) As Boolean
+        Protected Overrides Function TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(
+            node As SyntaxNode,
+            ByRef leftNode As SyntaxNode,
+            ByRef rightNode As SyntaxNode,
+            ByRef comparisonNode As SyntaxNode) As Boolean
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -98,7 +114,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                 If Not memberAccessExpression Is Nothing Then
 
                     GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(0).GetExpression(), leftNode)
-                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(1).GetExpression(), rightnode)
+                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(1).GetExpression(), rightNode)
 
                     comparisonNode = invocationExpression.ArgumentList.Arguments(2).GetExpression()
 
@@ -112,7 +128,11 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Protected Overrides Function TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(node As SyntaxNode, ByRef leftNode As SyntaxNode, ByRef rightnode As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
+        Protected Overrides Function TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(
+            node As SyntaxNode,
+            ByRef leftNode As SyntaxNode,
+            ByRef rightNode As SyntaxNode,
+            ByRef stringComparisons As ImmutableArray(Of String)) As Boolean
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -126,7 +146,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                     Dim rightStringComparisons As ImmutableArray(Of String) = Nothing
 
                     GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(0).GetExpression(), leftNode, leftStringComparisons)
-                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(1).GetExpression(), rightnode, rightStringComparisons)
+                    GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments(1).GetExpression(), rightNode, rightStringComparisons)
 
                     stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray()
 
@@ -140,7 +160,10 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Private Shared Sub GetCaseChangingInvocation(node As SyntaxNode, ByRef expression As SyntaxNode, ByRef stringComparisons As ImmutableArray(Of String))
+        Private Shared Sub GetCaseChangingInvocation(
+            node As SyntaxNode,
+            ByRef replacement As SyntaxNode,
+            ByRef stringComparisons As ImmutableArray(Of String))
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -155,7 +178,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                         Case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCultureCaseChangingMethodName,
                              DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCultureCaseChangingMethodName
 
-                            expression = memberAccessExpression.Expression
+                            replacement = memberAccessExpression.Expression
                             stringComparisons = InvariantCulture
 
                             Return
@@ -163,7 +186,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                         Case DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName,
                              DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName
 
-                            expression = memberAccessExpression.Expression
+                            replacement = memberAccessExpression.Expression
                             stringComparisons = GetComparisonsFromArguments(invocationExpression.ArgumentList)
 
                             Return
@@ -172,14 +195,56 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
                 End If
 
+            Else
+
+                Dim conditionalAccessExpression = TryCast(node, ConditionalAccessExpressionSyntax)
+
+                If Not conditionalAccessExpression Is Nothing Then
+
+                    invocationExpression = TryCast(conditionalAccessExpression.WhenNotNull, InvocationExpressionSyntax)
+
+                    If Not invocationExpression Is Nothing Then
+
+                        Dim memberAccessExpression = TryCast(invocationExpression.Expression, MemberAccessExpressionSyntax)
+
+                        If Not memberAccessExpression Is Nothing Then
+
+                            Select Case memberAccessExpression.Name.Identifier.ValueText
+
+                                Case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCultureCaseChangingMethodName,
+                                     DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCultureCaseChangingMethodName
+
+                                    replacement = conditionalAccessExpression.Expression
+                                    stringComparisons = InvariantCulture
+
+                                    Return
+
+                                Case DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName,
+                                     DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName
+
+                                    replacement = conditionalAccessExpression.Expression
+                                    stringComparisons = GetComparisonsFromArguments(invocationExpression.ArgumentList)
+
+                                    Return
+
+                            End Select
+
+                        End If
+
+                    End If
+
+                End If
+
             End If
 
-            expression = node
+            replacement = node
             stringComparisons = All
 
         End Sub
 
-        Private Shared Sub GetCaseChangingInvocation(node As SyntaxNode, ByRef expression As SyntaxNode)
+        Private Shared Sub GetCaseChangingInvocation(
+            node As SyntaxNode,
+            ByRef replacement As SyntaxNode)
 
             Dim invocationExpression = TryCast(node, InvocationExpressionSyntax)
 
@@ -196,7 +261,7 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
                              DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName,
                              DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName
 
-                            expression = memberAccessExpression.Expression
+                            replacement = memberAccessExpression.Expression
 
                             Return
 
@@ -204,9 +269,42 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
                 End If
 
+            Else
+
+                Dim conditionalAccessExpression = TryCast(node, ConditionalAccessExpressionSyntax)
+
+                If Not conditionalAccessExpression Is Nothing Then
+
+                    invocationExpression = TryCast(conditionalAccessExpression.WhenNotNull, InvocationExpressionSyntax)
+
+                    If Not invocationExpression Is Nothing Then
+
+                        Dim memberAccessExpression = TryCast(invocationExpression.Expression, MemberAccessExpressionSyntax)
+
+                        If Not memberAccessExpression Is Nothing Then
+
+                            Select Case memberAccessExpression.Name.Identifier.ValueText
+
+                                Case DoNotCreateStringsForComparisonAnalyzer.ToLowerInvariantCultureCaseChangingMethodName,
+                                     DoNotCreateStringsForComparisonAnalyzer.ToUpperInvariantCultureCaseChangingMethodName,
+                                     DoNotCreateStringsForComparisonAnalyzer.ToLowerCurrentCultureCaseChangingMethodName,
+                                     DoNotCreateStringsForComparisonAnalyzer.ToUpperCurrentCultureCaseChangingMethodName
+
+                                    replacement = conditionalAccessExpression.Expression
+
+                                    Return
+
+                            End Select
+
+                        End If
+
+                    End If
+
+                End If
+
             End If
 
-            expression = node
+            replacement = node
 
         End Sub
 

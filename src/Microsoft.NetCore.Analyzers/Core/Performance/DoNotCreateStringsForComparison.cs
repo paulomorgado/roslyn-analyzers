@@ -160,11 +160,11 @@ namespace Microsoft.NetCore.Analyzers.Performance
                        binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueNotEquals;
 
                 bool hasCaseChangingMethodInvocation(IOperation operation)
-                    => operation.Type.Equals(stringType) &&
-                        operation is IInvocationOperation invocationExpression &&
-                        CaseChangingMethodNames.Contains(invocationExpression.TargetMethod.Name, StringComparer.Ordinal) &&
-                        (invocationExpression.Arguments.Length == 0 ||
-                            isCultureInfoProperty(invocationExpression.Arguments[0]));
+                    => operation is IConditionalAccessOperation conditionalAccessOperation && hasCaseChangingMethodInvocation(conditionalAccessOperation.WhenNotNull) ||
+                        operation is IInvocationOperation invocationOperation &&
+                        CaseChangingMethodNames.Contains(invocationOperation.TargetMethod.Name, StringComparer.Ordinal) &&
+                        (invocationOperation.Arguments.Length == 0 ||
+                            isCultureInfoProperty(invocationOperation.Arguments[0]));
 
                 bool isCultureInfoProperty(IArgumentOperation argumentOperation)
                     => argumentOperation.Value is IPropertyReferenceOperation propertyOperation &&

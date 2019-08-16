@@ -63,14 +63,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 {
                     case DoNotCreateStringsForComparisonAnalyzer.OperationBinary:
                         {
-                            if (TryGetReplacementSyntaxForBinaryOperation(node, out var leftNode, out var rightnode, out var stringComparisons))
+                            if (TryGetReplacementSyntaxForBinaryOperation(node, out var leftNode, out var rightNode, out var stringComparisons))
                             {
                                 var shouldNegateKey = properties.ContainsKey(DoNotCreateStringsForComparisonAnalyzer.ShouldNegateKey);
 
                                 foreach (var stringComparison in stringComparisons)
                                 {
                                     context.RegisterCodeFix(
-                                        new DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, shouldNegateKey),
+                                        new DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, shouldNegateKey),
                                         context.Diagnostics);
                                 }
                             }
@@ -85,12 +85,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
                         }
                     case DoNotCreateStringsForComparisonAnalyzer.OperationEqualsInstanceWithoutComparison:
                         {
-                            if (TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(node, out var leftNode, out var rightnode, out var stringComparisons))
+                            if (TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(node, out var leftNode, out var rightNode, out var stringComparisons))
                             {
                                 foreach (var stringComparison in stringComparisons)
                                 {
                                     context.RegisterCodeFix(
-                                        new DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, false),
+                                        new DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false),
                                         context.Diagnostics);
                                 }
                             }
@@ -99,10 +99,10 @@ namespace Microsoft.NetCore.Analyzers.Performance
                         }
                     case DoNotCreateStringsForComparisonAnalyzer.OperationEqualsInstanceWithComparison:
                         {
-                            if (TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(node, out var leftNode, out var rightnode, out var stringComparison))
+                            if (TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(node, out var leftNode, out var rightNode, out var stringComparison))
                             {
                                 context.RegisterCodeFix(
-                                    new DoNotCreateStringsForComparisonInstanceWithComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, false),
+                                    new DoNotCreateStringsForComparisonInstanceWithComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false),
                                     context.Diagnostics);
                             }
 
@@ -110,12 +110,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
                         }
                     case DoNotCreateStringsForComparisonAnalyzer.OperationEqualsStaticWithoutComparison:
                         {
-                            if (TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(node, out var leftNode, out var rightnode, out var stringComparisons))
+                            if (TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(node, out var leftNode, out var rightNode, out var stringComparisons))
                             {
                                 foreach (var stringComparison in stringComparisons)
                                 {
                                     context.RegisterCodeFix(
-                                        new DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, false),
+                                        new DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false),
                                         context.Diagnostics);
                                 }
                             }
@@ -124,10 +124,10 @@ namespace Microsoft.NetCore.Analyzers.Performance
                         }
                     case DoNotCreateStringsForComparisonAnalyzer.OperationEqualsStaticWithComparison:
                         {
-                            if (TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(node, out var leftNode, out var rightnode, out var stringComparison))
+                            if (TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(node, out var leftNode, out var rightNode, out var stringComparison))
                             {
                                 context.RegisterCodeFix(
-                                    new DoNotCreateStringsForComparisonStaticWithComparisonCodeAction(context.Document, node, leftNode, rightnode, stringComparison, false),
+                                    new DoNotCreateStringsForComparisonStaticWithComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false),
                                     context.Diagnostics);
                             }
 
@@ -137,31 +137,55 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
         }
 
-        protected abstract bool TryGetReplacementSyntaxForBinaryOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
-        protected abstract bool TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out SyntaxNode comparisonNode);
-        protected abstract bool TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
-        protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out SyntaxNode comparisonNode);
-        protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(SyntaxNode node, out SyntaxNode leftNode, out SyntaxNode rightnode, out ImmutableArray<string> stringComparisons);
+        protected abstract bool TryGetReplacementSyntaxForBinaryOperation(
+            SyntaxNode node,
+            out SyntaxNode leftNode,
+            out SyntaxNode rightNode,
+            out ImmutableArray<string> stringComparisons);
+
+        protected abstract bool TryGetReplacementSyntaxForEqualsInstanceWithComparisonOperation(
+            SyntaxNode node,
+            out SyntaxNode leftNode,
+            out SyntaxNode rightNode,
+            out SyntaxNode comparisonNode);
+
+        protected abstract bool TryGetReplacementSyntaxForEqualsInstanceWithoutComparisonOperation(
+            SyntaxNode node,
+            out SyntaxNode leftNode,
+            out SyntaxNode rightNode,
+            out ImmutableArray<string> stringComparisons);
+
+        protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithComparisonOperation(
+            SyntaxNode node,
+            out SyntaxNode leftNode,
+            out SyntaxNode rightNode,
+            out SyntaxNode comparisonNode);
+
+        protected abstract bool TryGetReplacementSyntaxForEqualsStaticWithoutComparisonOperation(
+            SyntaxNode node,
+            out SyntaxNode leftNode,
+            out SyntaxNode rightNode,
+            out ImmutableArray<string> stringComparisons);
 
         private abstract class DoNotCreateStringsForComparisonCodeAction : CodeAction
         {
             private readonly Document document;
             private readonly SyntaxNode node;
             private readonly SyntaxNode leftNode;
-            private readonly SyntaxNode rightnode;
+            private readonly SyntaxNode rightNode;
             private readonly bool negate;
 
             protected DoNotCreateStringsForComparisonCodeAction(
                 Document document,
                 SyntaxNode node,
                 SyntaxNode leftNode,
-                SyntaxNode rightnode,
+                SyntaxNode rightNode,
                 bool negate)
             {
                 this.document = document;
                 this.node = node;
                 this.leftNode = leftNode;
-                this.rightnode = rightnode;
+                this.rightNode = rightNode;
                 this.negate = negate;
             }
 
@@ -173,8 +197,8 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 var generator = editor.Generator;
 
                 var leftNode = this.leftNode;
-                var rightnode = this.rightnode;
-                var replacementSyntax = GetReplacementSyntax(editor, generator, leftNode, rightnode);
+                var rightNode = this.rightNode;
+                var replacementSyntax = GetNodeSyntax(editor, generator, leftNode, rightNode);
 
                 if (this.negate)
                 {
@@ -190,7 +214,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 return editor.GetChangedDocument();
             }
 
-            protected abstract SyntaxNode GetReplacementSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightnode);
+            protected abstract SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode);
         }
 
         private sealed class DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction
@@ -198,8 +222,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             private readonly string stringComparison;
 
-            public DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(Document document, SyntaxNode node, SyntaxNode leftNode, SyntaxNode rightnode, string stringComparison, bool negate)
-                : base(document, node, leftNode, rightnode, negate)
+            public DoNotCreateStringsForComparisonStaticWithoutComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                string stringComparison,
+                bool negate)
+                : base(document, node, leftNode, rightNode, negate)
             {
                 this.stringComparison = stringComparison;
                 this.EquivalenceKey = stringComparison;
@@ -207,12 +237,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             public override string EquivalenceKey { get; }
 
-            protected sealed override SyntaxNode GetReplacementSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightnode)
+            protected sealed override SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode)
             {
                 return generator.InvocationExpression(
                     generator.MemberAccessExpression(generator.TypeExpression(SpecialType.System_String), nameof(string.Equals)),
                     leftNode.WithoutLeadingTrivia(),
-                    rightnode.WithoutTrailingTrivia(),
+                    rightNode.WithoutTrailingTrivia(),
                     generator.MemberAccessExpression(generator.TypeExpression(WellKnownTypes.StringComparison(editor.SemanticModel.Compilation)), stringComparison));
             }
         }
@@ -222,8 +252,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             private readonly SyntaxNode stringComparison;
 
-            public DoNotCreateStringsForComparisonStaticWithComparisonCodeAction(Document document, SyntaxNode node, SyntaxNode leftNode, SyntaxNode rightnode, SyntaxNode stringComparison, bool negate)
-                : base(document, node, leftNode, rightnode, negate)
+            public DoNotCreateStringsForComparisonStaticWithComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                SyntaxNode stringComparison,
+                bool negate)
+                : base(document, node, leftNode, rightNode, negate)
             {
                 this.stringComparison = stringComparison;
                 this.EquivalenceKey = stringComparison.ToString();
@@ -231,12 +267,12 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             public override string EquivalenceKey { get; }
 
-            protected sealed override SyntaxNode GetReplacementSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightnode)
+            protected sealed override SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode)
             {
                 return generator.InvocationExpression(
                     generator.MemberAccessExpression(generator.TypeExpression(SpecialType.System_String), nameof(string.Equals)),
                     leftNode.WithoutLeadingTrivia(),
-                    rightnode.WithoutTrailingTrivia(),
+                    rightNode.WithoutTrailingTrivia(),
                     this.stringComparison);
             }
         }
@@ -246,8 +282,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             private readonly string stringComparison;
 
-            public DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(Document document, SyntaxNode node, SyntaxNode leftNode, SyntaxNode rightnode, string stringComparison, bool negate)
-                : base(document, node, leftNode, rightnode, negate)
+            public DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                string stringComparison,
+                bool negate)
+                : base(document, node, leftNode, rightNode, negate)
             {
                 this.stringComparison = stringComparison;
                 this.EquivalenceKey = stringComparison;
@@ -255,11 +297,11 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             public override string EquivalenceKey { get; }
 
-            protected sealed override SyntaxNode GetReplacementSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightnode)
+            protected sealed override SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode)
             {
                 return generator.InvocationExpression(
                     generator.MemberAccessExpression(leftNode.WithoutLeadingTrivia(), nameof(string.Equals)),
-                    rightnode.WithoutTrailingTrivia(),
+                    rightNode.WithoutTrailingTrivia(),
                     generator.MemberAccessExpression(generator.TypeExpression(WellKnownTypes.StringComparison(editor.SemanticModel.Compilation)), stringComparison));
             }
         }
@@ -269,8 +311,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
         {
             private readonly SyntaxNode stringComparison;
 
-            public DoNotCreateStringsForComparisonInstanceWithComparisonCodeAction(Document document, SyntaxNode node, SyntaxNode leftNode, SyntaxNode rightnode, SyntaxNode stringComparison, bool negate)
-                : base(document, node, leftNode, rightnode, negate)
+            public DoNotCreateStringsForComparisonInstanceWithComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                SyntaxNode stringComparison,
+                bool negate)
+                : base(document, node, leftNode, rightNode, negate)
             {
                 this.stringComparison = stringComparison;
                 this.EquivalenceKey = stringComparison.ToString();
@@ -278,11 +326,11 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
             public override string EquivalenceKey { get; }
 
-            protected sealed override SyntaxNode GetReplacementSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightnode)
+            protected sealed override SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode)
             {
                 return generator.InvocationExpression(
                     generator.MemberAccessExpression(leftNode.WithoutLeadingTrivia(), nameof(string.Equals)),
-                    rightnode.WithoutTrailingTrivia(),
+                    rightNode.WithoutTrailingTrivia(),
                     stringComparison);
             }
         }
