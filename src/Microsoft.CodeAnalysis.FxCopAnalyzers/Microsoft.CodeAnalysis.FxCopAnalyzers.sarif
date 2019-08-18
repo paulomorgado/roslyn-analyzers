@@ -2176,6 +2176,26 @@
             ]
           }
         },
+        "CA1830": {
+          "id": "CA1830",
+          "shortDescription": "Do not create strings for comparison.",
+          "fullDescription": "A string comparison operation ignoring casing should not create strings for that comparison. Use the Equals method with a StringComparison option that ignores case.",
+          "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca1830",
+          "properties": {
+            "category": "Performance",
+            "isEnabledByDefault": true,
+            "typeName": "DoNotCreateStringsForComparisonAnalyzer",
+            "languages": [
+              "C#",
+              "Visual Basic"
+            ],
+            "tags": [
+              "PortedFromFxCop",
+              "Telemetry"
+            ]
+          }
+        },
         "CA2000": {
           "id": "CA2000",
           "shortDescription": "Dispose objects before losing scope",

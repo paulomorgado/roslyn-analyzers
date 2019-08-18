@@ -90,7 +90,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
                                 foreach (var stringComparison in stringComparisons)
                                 {
                                     context.RegisterCodeFix(
-                                        new DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false),
+                                        GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(context.Document, node, leftNode, rightNode, stringComparison, false, properties.ContainsKey(DoNotCreateStringsForComparisonAnalyzer.IsConditionalKey)),
                                         context.Diagnostics);
                                 }
                             }
@@ -167,7 +167,16 @@ namespace Microsoft.NetCore.Analyzers.Performance
             out SyntaxNode rightNode,
             out ImmutableArray<string> stringComparisons);
 
-        private abstract class DoNotCreateStringsForComparisonCodeAction : CodeAction
+        protected abstract DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                string stringComparison,
+                bool negate,
+                bool isConditional);
+
+        protected abstract class DoNotCreateStringsForComparisonCodeAction : CodeAction
         {
             private readonly Document document;
             private readonly SyntaxNode node;
@@ -277,33 +286,37 @@ namespace Microsoft.NetCore.Analyzers.Performance
             }
         }
 
-        private sealed class DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+        protected abstract class DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
             : DoNotCreateStringsForComparisonCodeAction
         {
             private readonly string stringComparison;
+            private readonly bool isConditional;
 
-            public DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
+            protected DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
                 Document document,
                 SyntaxNode node,
                 SyntaxNode leftNode,
                 SyntaxNode rightNode,
                 string stringComparison,
-                bool negate)
+                bool negate,
+                bool isConditional)
                 : base(document, node, leftNode, rightNode, negate)
             {
                 this.stringComparison = stringComparison;
+                this.isConditional = isConditional;
                 this.EquivalenceKey = stringComparison;
             }
 
             public override string EquivalenceKey { get; }
 
             protected sealed override SyntaxNode GetNodeSyntax(DocumentEditor editor, SyntaxGenerator generator, SyntaxNode leftNode, SyntaxNode rightNode)
-            {
-                return generator.InvocationExpression(
-                    generator.MemberAccessExpression(leftNode.WithoutLeadingTrivia(), nameof(string.Equals)),
-                    rightNode.WithoutTrailingTrivia(),
-                    generator.MemberAccessExpression(generator.TypeExpression(WellKnownTypes.StringComparison(editor.SemanticModel.Compilation)), stringComparison));
-            }
+                => GetNodeSyntax(
+                    leftNode,
+                    rightNode,
+                    generator.MemberAccessExpression(generator.TypeExpression(WellKnownTypes.StringComparison(editor.SemanticModel.Compilation)), stringComparison),
+                    isConditional);
+
+            protected abstract SyntaxNode GetNodeSyntax(SyntaxNode leftNode, SyntaxNode rightNode, SyntaxNode stringComparison, bool isConditional);
         }
 
         private sealed class DoNotCreateStringsForComparisonInstanceWithComparisonCodeAction

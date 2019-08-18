@@ -6,6 +6,7 @@ Imports Microsoft.CodeAnalysis.Diagnostics
 Imports Microsoft.CodeAnalysis.VisualBasic.Syntax
 Imports System.Collections.Immutable
 Imports System.Globalization
+Imports Microsoft.CodeAnalysis.VisualBasic
 
 Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
     <DiagnosticAnalyzer(LanguageNames.VisualBasic)>
@@ -340,6 +341,40 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
+        Protected Overrides Function GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document As Document, node As SyntaxNode, leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As String, negate As Boolean, isConditional As Boolean) As DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+            Return New BasicDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
+        End Function
+
+        Private NotInheritable Class BasicDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+            Inherits DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+
+            Public Sub New(document As Document, node As SyntaxNode, leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As String, negate As Boolean, isConditional As Boolean)
+                MyBase.New(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
+            End Sub
+
+            Protected Overrides Function GetNodeSyntax(leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As SyntaxNode, isConditional As Boolean) As SyntaxNode
+
+                Dim identifierName = SyntaxFactory.IdentifierName(NameOf(String.Equals))
+                Dim leftExpression = DirectCast(leftNode.WithoutTrailingTrivia(), ExpressionSyntax)
+                Dim rightExpression = DirectCast(rightNode.WithoutTrailingTrivia(), ExpressionSyntax)
+                Dim arguments() As ArgumentSyntax =
+                    {
+                        SyntaxFactory.SimpleArgument(DirectCast(rightNode.WithoutTrailingTrivia(), ExpressionSyntax)),
+                        SyntaxFactory.SimpleArgument(DirectCast(stringComparison, ExpressionSyntax))
+                    }
+                Dim argumentList = SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments))
+
+                Return If(isConditional,
+                    SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.ConditionalAccessExpression(leftExpression, identifierName),
+                        argumentList),
+                    SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, leftExpression, SyntaxFactory.Token(SyntaxKind.DotToken), identifierName),
+                        argumentList))
+
+            End Function
+
+        End Class
     End Class
 
 End Namespace

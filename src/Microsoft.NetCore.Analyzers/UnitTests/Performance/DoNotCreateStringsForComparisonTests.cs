@@ -221,6 +221,11 @@ class C
         _ = [|""x"".Equals(""y"".ToUpper())|];
         _ = [|""y"".ToLower().Equals(""x"")|];
         _ = [|""x"".Equals(""y"".ToLower())|];
+
+        _ = [|""y""?.ToUpper().Equals(""x"")|];
+        _ = [|""x"".Equals(""y""?.ToUpper())|];
+        _ = [|""y""?.ToLower().Equals(""x"")|];
+        _ = [|""x"".Equals(""y""?.ToLower())|];
     }}
 }}
 ",
@@ -235,6 +240,11 @@ class C
 {{
     void M()
     {{
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
+        _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
+        _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
+
         _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});
         _ = ""x"".Equals(""y"", StringComparison.{expectedStringComparison});
         _ = ""y"".Equals(""x"", StringComparison.{expectedStringComparison});

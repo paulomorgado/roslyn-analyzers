@@ -20,6 +20,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
         internal const string RuleId = "CA1830";
         internal const string OperationKey = nameof(OperationKey);
         internal const string ShouldNegateKey = nameof(ShouldNegateKey);
+        internal const string IsConditionalKey = nameof(IsConditionalKey);
         internal const string OperationEqualsInstanceWithComparison = nameof(OperationEqualsInstanceWithComparison);
         internal const string OperationEqualsInstanceWithoutComparison = nameof(OperationEqualsInstanceWithoutComparison);
         internal const string OperationEqualsStaticWithComparison = nameof(OperationEqualsStaticWithComparison);
@@ -134,30 +135,59 @@ namespace Microsoft.NetCore.Analyzers.Performance
                     {
                         var invocationOperation = (IInvocationOperation)operationAnalysisContext.Operation;
 
-                        if (isEqualsMethodInvocation(invocationOperation) &&
-                            (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation) ||
-                                isStaticMethodWithCaseChangingMethodInvocation(invocationOperation)) &&
-                            getEqualsInvocationOperationKey(invocationOperation) is string operationKey)
+                        if (isEqualsMethodInvocation(invocationOperation))
                         {
-                            var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
-                            propertiesBuilder.Add(OperationKey, operationKey);
-                            var properties = propertiesBuilder.ToImmutable();
+                            if (isInstanceMethodWithCaseChangingMethodInvocation(invocationOperation))
+                            {
+                                var isConditional = invocationOperation.Parent is IConditionalAccessOperation;
+                                var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                                propertiesBuilder.Add(
+                                    OperationKey,
+                                    invocationOperation.Arguments.Length == 1
+                                        ? OperationEqualsInstanceWithoutComparison
+                                        : OperationEqualsInstanceWithComparison);
+                                if (isConditional)
+                                {
+                                    propertiesBuilder.Add(IsConditionalKey, null);
+                                }
+                                var properties = propertiesBuilder.ToImmutable();
 
-                            operationAnalysisContext.ReportDiagnostic(
-                                invocationOperation.Syntax.CreateDiagnostic(
-                                    rule: s_rule,
-                                    properties: properties));
+                                IOperation operation = invocationOperation;
+                                while (operation is IInvocationOperation inv && inv.Instance is IConditionalAccessInstanceOperation) operation = operation.Parent.Parent;
+
+                                operationAnalysisContext.ReportDiagnostic(
+                                    operation.Syntax.CreateDiagnostic(
+                                        rule: s_rule,
+                                        properties: properties));
+                            }
+                            else if (isStaticMethodWithCaseChangingMethodInvocation(invocationOperation))
+                            {
+                                var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
+                                propertiesBuilder.Add(
+                                    OperationKey,
+                                    invocationOperation.Arguments.Length == 2
+                                        ? OperationEqualsStaticWithoutComparison
+                                        : OperationEqualsStaticWithComparison);
+                                var properties = propertiesBuilder.ToImmutable();
+
+                                operationAnalysisContext.ReportDiagnostic(
+                                    invocationOperation.Syntax.CreateDiagnostic(
+                                        rule: s_rule,
+                                        properties: properties));
+                            }
                         }
 
                     }, OperationKind.Invocation);
 
                 bool isEqualityBinaryOperation(IBinaryOperation binaryOperation)
-                   => binaryOperation.OperatorKind == BinaryOperatorKind.Equals ||
-                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueEquals;
+                   => (binaryOperation.OperatorKind == BinaryOperatorKind.Equals ||
+                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueEquals) &&
+                       binaryOperation.OperatorMethod.ContainingType.Equals(stringType);
 
                 bool isInequalityOperationtyBinary(IBinaryOperation binaryOperation)
-                   => binaryOperation.OperatorKind == BinaryOperatorKind.NotEquals ||
-                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueNotEquals;
+                   => (binaryOperation.OperatorKind == BinaryOperatorKind.NotEquals ||
+                       binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueNotEquals) &&
+                       binaryOperation.OperatorMethod.ContainingType.Equals(stringType);
 
                 bool hasCaseChangingMethodInvocation(IOperation operation)
                     => operation is IConditionalAccessOperation conditionalAccessOperation && hasCaseChangingMethodInvocation(conditionalAccessOperation.WhenNotNull) ||
@@ -173,7 +203,7 @@ namespace Microsoft.NetCore.Analyzers.Performance
 
                 bool isInstanceMethodWithCaseChangingMethodInvocation(IInvocationOperation invocationOperation)
                     => invocationOperation.Instance is IOperation instance &&
-                        (hasCaseChangingMethodInvocation(instance) ||
+                        (hasCaseChangingMethodInvocation(instance is IConditionalAccessInstanceOperation ? ((IConditionalAccessOperation)invocationOperation.Parent).Operation : instance) ||
                             hasCaseChangingMethodInvocation(invocationOperation.Arguments[0].Value));
 
                 bool isStaticMethodWithCaseChangingMethodInvocation(IInvocationOperation invocationOperation)
@@ -184,21 +214,6 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 bool isEqualsMethodInvocation(IInvocationOperation invocationOperation)
                     => invocationOperation.TargetMethod.Name.Equals(nameof(string.Equals), StringComparison.Ordinal) &&
                         invocationOperation.TargetMethod.ContainingType.Equals(stringType);
-
-                string getEqualsInvocationOperationKey(IInvocationOperation invocationOperation)
-                {
-                    switch (invocationOperation.Instance)
-                    {
-                        case null:
-                            return (invocationOperation.Arguments.Length == 2)
-                                ? OperationEqualsStaticWithoutComparison
-                                : OperationEqualsStaticWithComparison;
-                        case IOperation instance:
-                            return (invocationOperation.Arguments.Length == 1)
-                                ? OperationEqualsInstanceWithoutComparison
-                                : OperationEqualsInstanceWithComparison;
-                    }
-                }
             });
         }
     }

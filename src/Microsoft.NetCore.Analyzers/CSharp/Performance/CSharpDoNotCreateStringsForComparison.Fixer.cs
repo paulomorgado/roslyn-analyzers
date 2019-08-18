@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.NetCore.Analyzers.Performance;
@@ -43,7 +44,10 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             out SyntaxNode rightNode,
             out SyntaxNode comparisonNode)
         {
-            if (node is InvocationExpressionSyntax invocationExpression &&
+            var invocationExpression = (node as InvocationExpressionSyntax) ??
+                ((node as ConditionalAccessExpressionSyntax)?.WhenNotNull as InvocationExpressionSyntax);
+
+            if (invocationExpression is object &&
                 invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
             {
                 GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode);
@@ -67,15 +71,28 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             out SyntaxNode rightNode,
             out ImmutableArray<string> stringComparisons)
         {
-            if (node is InvocationExpressionSyntax invocationExpression &&
-                invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
+            switch (node)
             {
-                GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode, out var leftStringComparisons);
-                GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightNode, out var rightStringComparisons);
+                case InvocationExpressionSyntax invocationExpression
+                    when invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression:
+                    {
+                        GetCaseChangingInvocation(memberAccessExpression.Expression, out leftNode, out var leftStringComparisons);
+                        GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightNode, out var rightStringComparisons);
 
-                stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
+                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
 
-                return true;
+                        return true;
+                    }
+                case ConditionalAccessExpressionSyntax conditionalAccessExpression
+                    when conditionalAccessExpression.WhenNotNull is InvocationExpressionSyntax invocationExpression:
+                    {
+                        GetCaseChangingInvocation(conditionalAccessExpression.Expression, out leftNode, out var leftStringComparisons);
+                        GetCaseChangingInvocation(invocationExpression.ArgumentList.Arguments[0].Expression, out rightNode, out var rightStringComparisons);
+
+                        stringComparisons = leftStringComparisons.Intersect(rightStringComparisons).ToImmutableArray();
+
+                        return true;
+                    }
             }
 
             leftNode = node;
@@ -249,6 +266,55 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             }
 
             return ImmutableArray<string>.Empty;
+        }
+
+        protected override sealed DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                string stringComparison,
+                bool negate,
+                bool isConditional)
+            => new CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document, node, leftNode, rightNode, stringComparison, negate, isConditional);
+
+        private sealed class CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+            : DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+        {
+            public CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
+                Document document,
+                SyntaxNode node,
+                SyntaxNode leftNode,
+                SyntaxNode rightNode,
+                string stringComparison,
+                bool negate,
+                bool isConditional)
+                : base(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
+            {
+            }
+
+            protected override SyntaxNode GetNodeSyntax(SyntaxNode leftNode, SyntaxNode rightNode, SyntaxNode stringComparison, bool isConditional)
+            {
+                var identifierName = SyntaxFactory.IdentifierName(nameof(string.Equals));
+                var leftExpression = (ExpressionSyntax)leftNode.WithoutTrailingTrivia();
+                var argumentList = SyntaxFactory.ArgumentList(
+                    SyntaxFactory.SeparatedList(
+                        new ArgumentSyntax[]
+                        {
+                            SyntaxFactory.Argument((ExpressionSyntax)rightNode.WithoutTrailingTrivia()),
+                            SyntaxFactory.Argument((ExpressionSyntax)stringComparison),
+                        }));
+
+                return isConditional
+                    ? (SyntaxNode)SyntaxFactory.ConditionalAccessExpression(
+                        leftExpression,
+                        SyntaxFactory.InvocationExpression(
+                            SyntaxFactory.MemberBindingExpression(identifierName),
+                            argumentList))
+                    : (SyntaxNode)SyntaxFactory.InvocationExpression(
+                        SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, leftExpression, identifierName),
+                        argumentList);
+            }
         }
     }
 }
