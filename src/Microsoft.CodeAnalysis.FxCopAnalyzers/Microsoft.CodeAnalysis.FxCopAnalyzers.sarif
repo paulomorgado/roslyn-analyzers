@@ -2664,6 +2664,7 @@
           "shortDescription": "Do not use TypeNameHandling values other than None",
           "fullDescription": "Deserializing JSON when using a TypeNameHandling value other than None can be insecure.  If you need to instead detect Json.NET deserialization when a SerializationBinder isn't specified, then disable rule CA2326, and enable rules CA2327, CA2328, CA2329, and CA2330.",
           "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca2326",
           "properties": {
             "category": "Security",
             "isEnabledByDefault": false,
@@ -2679,6 +2680,7 @@
           "shortDescription": "Do not use insecure JsonSerializerSettings",
           "fullDescription": "When deserializing untrusted input, allowing arbitrary types to be deserialized is insecure.  When using JsonSerializerSettings, use TypeNameHandling.None, or for values other than None, restrict deserialized types with a SerializationBinder.",
           "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca2327",
           "properties": {
             "category": "Security",
             "isEnabledByDefault": false,
@@ -2698,6 +2700,7 @@
           "shortDescription": "Ensure that JsonSerializerSettings are secure",
           "fullDescription": "When deserializing untrusted input, allowing arbitrary types to be deserialized is insecure.  When using JsonSerializerSettings, ensure TypeNameHandling.None is specified, or for values other than None, ensure a SerializationBinder is specified to restrict deserialized types.",
           "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca2328",
           "properties": {
             "category": "Security",
             "isEnabledByDefault": false,
@@ -2717,6 +2720,7 @@
           "shortDescription": "Do not deserialize with JsonSerializer using an insecure configuration",
           "fullDescription": "When deserializing untrusted input, allowing arbitrary types to be deserialized is insecure. When using deserializing JsonSerializer, use TypeNameHandling.None, or for values other than None, restrict deserialized types with a SerializationBinder.",
           "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca2329",
           "properties": {
             "category": "Security",
             "isEnabledByDefault": false,
@@ -2736,6 +2740,7 @@
           "shortDescription": "Ensure that JsonSerializer has a secure configuration when deserializing",
           "fullDescription": "When deserializing untrusted input, allowing arbitrary types to be deserialized is insecure. When using deserializing JsonSerializer, use TypeNameHandling.None, or for values other than None, restrict deserialized types with a SerializationBinder.",
           "defaultLevel": "warning",
+          "helpUri": "https://docs.microsoft.com/visualstudio/code-quality/ca2330",
           "properties": {
             "category": "Security",
             "isEnabledByDefault": false,
