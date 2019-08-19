@@ -345,7 +345,7 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task Bash_ToXInstanceEquals2(string expectedStringComparison)
+        public static Task Basic_ToXInstanceEquals2(string expectedStringComparison)
             => new VerifyVB.Test
             {
                 TestState =
@@ -613,7 +613,7 @@ class C
 
         [Theory]
         [MemberData(nameof(StringComparison_TheoryData))]
-        public static Task Bash_ToXSystemStringEqualsStatic2(string expectedStringComparison)
+        public static Task Basic_ToXSystemStringEqualsStatic2(string expectedStringComparison)
             => new VerifyVB.Test
             {
                 TestState =
@@ -719,7 +719,7 @@ class C
             }.RunAsync();
 
         [Fact]
-        public static Task Bash_ToXSystemStringEqualsStatic3()
+        public static Task Basic_ToXSystemStringEqualsStatic3()
             => new VerifyVB.Test
             {
                 TestState =
@@ -959,7 +959,7 @@ class C
 
         [Theory]
         [MemberData(nameof(ToXInvariant_NonCaseChanging_TheoryData))]
-        public static Task Bash_ToXInvariantComparisonNonCaseChanging(string @case)
+        public static Task Basic_ToXInvariantComparisonNonCaseChanging(string @case)
             => new VerifyVB.Test
             {
                 TestState =

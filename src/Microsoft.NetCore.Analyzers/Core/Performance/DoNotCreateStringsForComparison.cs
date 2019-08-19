@@ -182,12 +182,14 @@ namespace Microsoft.NetCore.Analyzers.Performance
                 bool isEqualityBinaryOperation(IBinaryOperation binaryOperation)
                    => (binaryOperation.OperatorKind == BinaryOperatorKind.Equals ||
                        binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueEquals) &&
-                       binaryOperation.OperatorMethod.ContainingType.Equals(stringType);
+                       binaryOperation.LeftOperand.Type.Equals(stringType) &&
+                       binaryOperation.RightOperand.Type.Equals(stringType);
 
                 bool isInequalityOperationtyBinary(IBinaryOperation binaryOperation)
                    => (binaryOperation.OperatorKind == BinaryOperatorKind.NotEquals ||
                        binaryOperation.OperatorKind == BinaryOperatorKind.ObjectValueNotEquals) &&
-                       binaryOperation.OperatorMethod.ContainingType.Equals(stringType);
+                       binaryOperation.LeftOperand.Type.Equals(stringType) &&
+                       binaryOperation.RightOperand.Type.Equals(stringType);
 
                 bool hasCaseChangingMethodInvocation(IOperation operation)
                     => operation is IConditionalAccessOperation conditionalAccessOperation && hasCaseChangingMethodInvocation(conditionalAccessOperation.WhenNotNull) ||

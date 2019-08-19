@@ -341,40 +341,31 @@ Namespace Microsoft.NetCore.VisualBasic.Analyzers.Performance
 
         End Function
 
-        Protected Overrides Function GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document As Document, node As SyntaxNode, leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As String, negate As Boolean, isConditional As Boolean) As DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
-            Return New BasicDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
+        Protected Overrides Function CreateConditionalSyntaxGenerator() As ConditionalSyntaxGenerator
+
+            Return New BasicConditionalSyntaxGenerator()
+
         End Function
 
-        Private NotInheritable Class BasicDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
-            Inherits DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+        Private NotInheritable Class BasicConditionalSyntaxGenerator
+            Inherits ConditionalSyntaxGenerator
 
-            Public Sub New(document As Document, node As SyntaxNode, leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As String, negate As Boolean, isConditional As Boolean)
-                MyBase.New(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
-            End Sub
+            Friend Overrides Function ConditionalAccessExpression(expression As SyntaxNode, whenNotNull As SyntaxNode) As SyntaxNode
+                Return SyntaxFactory.ConditionalAccessExpression(
+                    DirectCast(expression, ExpressionSyntax),
+                    DirectCast(whenNotNull, ExpressionSyntax))
+            End Function
 
-            Protected Overrides Function GetNodeSyntax(leftNode As SyntaxNode, rightNode As SyntaxNode, stringComparison As SyntaxNode, isConditional As Boolean) As SyntaxNode
+            Friend Overrides Function MemberBindingExpression(name As SyntaxNode) As SyntaxNode
+                Return SyntaxFactory.SimpleMemberAccessExpression(DirectCast(name, SimpleNameSyntax))
+            End Function
 
-                Dim identifierName = SyntaxFactory.IdentifierName(NameOf(String.Equals))
-                Dim leftExpression = DirectCast(leftNode.WithoutTrailingTrivia(), ExpressionSyntax)
-                Dim rightExpression = DirectCast(rightNode.WithoutTrailingTrivia(), ExpressionSyntax)
-                Dim arguments() As ArgumentSyntax =
-                    {
-                        SyntaxFactory.SimpleArgument(DirectCast(rightNode.WithoutTrailingTrivia(), ExpressionSyntax)),
-                        SyntaxFactory.SimpleArgument(DirectCast(stringComparison, ExpressionSyntax))
-                    }
-                Dim argumentList = SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList(arguments))
-
-                Return If(isConditional,
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.ConditionalAccessExpression(leftExpression, identifierName),
-                        argumentList),
-                    SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, leftExpression, SyntaxFactory.Token(SyntaxKind.DotToken), identifierName),
-                        argumentList))
-
+            Friend Overrides Function ElementBindingExpression(argumentList As SyntaxNode) As SyntaxNode
+                Return SyntaxFactory.InvocationExpression(expression:=Nothing, argumentList:=DirectCast(argumentList, ArgumentListSyntax))
             End Function
 
         End Class
+
     End Class
 
 End Namespace

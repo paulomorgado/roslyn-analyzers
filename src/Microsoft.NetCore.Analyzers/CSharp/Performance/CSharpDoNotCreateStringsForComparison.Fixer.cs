@@ -268,53 +268,19 @@ namespace Microsoft.NetCore.CSharp.Analyzers.Performance
             return ImmutableArray<string>.Empty;
         }
 
-        protected override sealed DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction GetDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
-                Document document,
-                SyntaxNode node,
-                SyntaxNode leftNode,
-                SyntaxNode rightNode,
-                string stringComparison,
-                bool negate,
-                bool isConditional)
-            => new CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(document, node, leftNode, rightNode, stringComparison, negate, isConditional);
+        protected sealed override ConditionalSyntaxGenerator CreateConditionalSyntaxGenerator()
+            => new CSharpConditionalSyntaxGenerator();
 
-        private sealed class CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
-            : DoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction
+        private sealed class CSharpConditionalSyntaxGenerator : ConditionalSyntaxGenerator
         {
-            public CSharpDoNotCreateStringsForComparisonInstanceWithoutComparisonCodeAction(
-                Document document,
-                SyntaxNode node,
-                SyntaxNode leftNode,
-                SyntaxNode rightNode,
-                string stringComparison,
-                bool negate,
-                bool isConditional)
-                : base(document, node, leftNode, rightNode, stringComparison, negate, isConditional)
-            {
-            }
+            internal override SyntaxNode ConditionalAccessExpression(SyntaxNode expression, SyntaxNode whenNotNull)
+                => SyntaxFactory.ConditionalAccessExpression((ExpressionSyntax)expression, (ExpressionSyntax)whenNotNull);
 
-            protected override SyntaxNode GetNodeSyntax(SyntaxNode leftNode, SyntaxNode rightNode, SyntaxNode stringComparison, bool isConditional)
-            {
-                var identifierName = SyntaxFactory.IdentifierName(nameof(string.Equals));
-                var leftExpression = (ExpressionSyntax)leftNode.WithoutTrailingTrivia();
-                var argumentList = SyntaxFactory.ArgumentList(
-                    SyntaxFactory.SeparatedList(
-                        new ArgumentSyntax[]
-                        {
-                            SyntaxFactory.Argument((ExpressionSyntax)rightNode.WithoutTrailingTrivia()),
-                            SyntaxFactory.Argument((ExpressionSyntax)stringComparison),
-                        }));
+            internal override SyntaxNode MemberBindingExpression(SyntaxNode name)
+                => SyntaxFactory.MemberBindingExpression((SimpleNameSyntax)name);
 
-                return isConditional
-                    ? (SyntaxNode)SyntaxFactory.ConditionalAccessExpression(
-                        leftExpression,
-                        SyntaxFactory.InvocationExpression(
-                            SyntaxFactory.MemberBindingExpression(identifierName),
-                            argumentList))
-                    : (SyntaxNode)SyntaxFactory.InvocationExpression(
-                        SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, leftExpression, identifierName),
-                        argumentList);
-            }
+            internal override SyntaxNode ElementBindingExpression(SyntaxNode argumentList)
+                => SyntaxFactory.ElementBindingExpression((BracketedArgumentListSyntax)argumentList);
         }
     }
 }
