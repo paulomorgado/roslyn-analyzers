@@ -18,7 +18,6 @@ namespace Microsoft.NetCore.Analyzers.ImmutableCollections
     [DiagnosticAnalyzer(LanguageNames.CSharp, LanguageNames.VisualBasic)]
     public sealed class DoNotCallToImmutableCollectionOnAnImmutableCollectionValueAnalyzer : DiagnosticAnalyzer
     {
-        private const string ImmutableArrayMetadataName = "System.Collections.Immutable.ImmutableArray`1";
         internal const string RuleId = "CA2009";
 
         private static readonly LocalizableString s_localizableTitle = new LocalizableResourceString(nameof(MicrosoftNetCoreAnalyzersResources.DoNotCallToImmutableCollectionOnAnImmutableCollectionValueTitle), MicrosoftNetCoreAnalyzersResources.ResourceManager, typeof(MicrosoftNetCoreAnalyzersResources));
@@ -35,12 +34,12 @@ namespace Microsoft.NetCore.Analyzers.ImmutableCollections
 
         private static readonly ImmutableDictionary<string, string> ImmutableCollectionMetadataNames = new Dictionary<string, string>
         {
-            ["ToImmutableArray"] = "System.Collections.Immutable.ImmutableArray`1",
-            ["ToImmutableDictionary"] = "System.Collections.Immutable.ImmutableDictionary`2",
-            ["ToImmutableHashSet"] = "System.Collections.Immutable.ImmutableHashSet`1",
-            ["ToImmutableList"] = "System.Collections.Immutable.ImmutableList`1",
-            ["ToImmutableSortedDictionary"] = "System.Collections.Immutable.ImmutableSortedDictionary`2",
-            ["ToImmutableSortedSet"] = "System.Collections.Immutable.ImmutableSortedSet`1",
+            ["ToImmutableArray"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableArray,
+            ["ToImmutableDictionary"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableDictionary,
+            ["ToImmutableHashSet"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableHashSet,
+            ["ToImmutableList"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableList,
+            ["ToImmutableSortedDictionary"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableSortedDictionary,
+            ["ToImmutableSortedSet"] = WellKnownTypeNames.SystemCollectionsImmutableImmutableSortedSet,
         }.ToImmutableDictionary();
 
         public static ImmutableArray<string> ToImmutableMethodNames => ImmutableCollectionMetadataNames.Keys.ToImmutableArray();
@@ -55,23 +54,7 @@ namespace Microsoft.NetCore.Analyzers.ImmutableCollections
             context.RegisterCompilationStartAction(compilationStartContext =>
             {
                 var compilation = compilationStartContext.Compilation;
-                var immutableArraySymbol = compilation.GetTypeByMetadataName(ImmutableArrayMetadataName);
-                if (immutableArraySymbol is null)
-                {
-                    var systemNamespace = compilation.GlobalNamespace.GetMembers(nameof(System)).OfType<INamespaceSymbol>().SingleOrDefault();
-                    var systemCollectionsNamespace = systemNamespace?.GetMembers(nameof(System.Collections)).OfType<INamespaceSymbol>().SingleOrDefault();
-                    var systemCollectionsImmutableNamespace = systemCollectionsNamespace?.GetMembers(nameof(System.Collections.Immutable)).OfType<INamespaceSymbol>().SingleOrDefault();
-                    if (systemCollectionsImmutableNamespace is null)
-                    {
-                        return;
-                    }
-
-                    var immutableArrayTypes = systemCollectionsImmutableNamespace.GetMembers(nameof(ImmutableArray)).OfType<INamedTypeSymbol>().Where(type => type.MetadataName == typeof(ImmutableArray<>).Name).ToArray();
-                    var localSymbol = immutableArrayTypes.FirstOrDefault(type => type.ContainingAssembly.Equals(compilation.Assembly));
-                    var publicSymbol = immutableArrayTypes.FirstOrDefault(type => type.DeclaredAccessibility == Accessibility.Public);
-                    var fallbackSymbol = immutableArrayTypes.FirstOrDefault();
-                    immutableArraySymbol = localSymbol ?? publicSymbol ?? fallbackSymbol;
-                }
+                var immutableArraySymbol = WellKnownTypes.ImmutableArray(compilation);
 
                 if (immutableArraySymbol is null)
                 {
